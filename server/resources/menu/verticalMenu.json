@@ -1,0 +1,92 @@
+{
+  "menu": [
+    {
+      "url": "admin/dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon icon-base bx bx-home-smile",
+      "slug": "admin.dashboard"
+    },
+    {
+      "menuHeader": "Manajemen"
+    },
+    {
+      "url": "admin/users",
+      "name": "Users",
+      "icon": "menu-icon icon-base bx bx-user",
+      "slug": "admin.users.index"
+    },
+    {
+      "url": "admin/packages",
+      "name": "Paket & Kategori",
+      "icon": "menu-icon icon-base bx bx-package",
+      "slug": "admin.packages.index"
+    },
+    {
+      "url": "admin/schedules",
+      "name": "Jadwal & Slot",
+      "icon": "menu-icon icon-base bx bx-time-five",
+      "slug": "admin.schedules.index"
+    },
+    {
+      "menuHeader": "Akses & Pembayaran"
+    },
+    {
+      "url": "admin/calendar",
+      "name": "Kalendar",
+      "icon": "menu-icon icon-base bx bx-calendar",
+      "slug": "admin.calendar.index"
+    },
+    {
+      "url": "admin/roles-akses",
+      "name": "Role & Akses",
+      "icon": "menu-icon icon-base bx bx-lock-open-alt",
+      "slug": "admin.roles-akses.index"
+    },
+    {
+      "url": "admin/payments",
+      "name": "Pembayaran",
+      "icon": "menu-icon icon-base bx bx-credit-card",
+      "slug": "admin.payments.index"
+    },
+    {
+      "menuHeader": "Konfigurasi"
+    },
+    {
+      "url": "/admin/payment-gateway",
+      "name": "Payment Gateway",
+      "icon": "menu-icon icon-base bx bx-wallet",
+      "slug": "admin.payment-gateway.index"
+    },
+    {
+      "name": "Pengaturan",
+      "icon": "menu-icon icon-base bx bx-cog",
+      "slug": "pages-account-settings.index",
+      "submenu": [
+        {
+          "url": "pages/account-settings-account",
+          "name": "Account",
+          "slug": "pages-account-settings-account"
+        },
+        {
+          "url": "pages/account-settings-notifications",
+          "name": "Notifications",
+          "slug": "pages-account-settings-notifications"
+        },
+        {
+          "url": "pages/account-settings-connections",
+          "name": "Connections",
+          "slug": "pages-account-settings-connections"
+        }
+      ]
+    },
+    {
+      "menuHeader": "Pusat Panggilan"
+    },
+    {
+      "url": "admin/call-center",
+      "icon": "menu-icon icon-base bx bx-support",
+      "name": "WhatsApp",
+      "slug": "admin.call-center.index"
+    }
+  ]
+}
