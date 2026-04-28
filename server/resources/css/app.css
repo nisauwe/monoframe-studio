@@ -1,0 +1,1035 @@
+/* =========================================================
+   MONOFRAME ADMIN THEME
+========================================================= */
+.monoframe-admin {
+  --mf-deep: #344fa5;
+  --mf-deep-dark: #2d438f;
+  --mf-primary: #5873dc;
+  --mf-primary-soft: #eef2ff;
+  --mf-blue: #0d6fa8;
+  --mf-sky: #9fbfd2;
+  --mf-bg: #f3f6fb;
+  --mf-ink: #162b4d;
+  --mf-muted: #728199;
+  --mf-border: #dfe7ef;
+  --mf-danger: #ef5350;
+  --mf-shadow: 0 18px 42px rgba(52, 79, 165, 0.12);
+  --mf-shadow-soft: 0 10px 28px rgba(52, 79, 165, 0.08);
+
+  background: var(--mf-bg) !important;
+  color: var(--mf-ink) !important;
+}
+
+.monoframe-admin .layout-wrapper,
+.monoframe-admin .layout-container,
+.monoframe-admin .layout-page,
+.monoframe-admin .content-wrapper {
+  background: transparent !important;
+}
+
+.monoframe-admin .layout-page {
+  background:
+    radial-gradient(circle at 80% 8%, rgba(159, 191, 210, 0.38), transparent 30%),
+    linear-gradient(135deg, #f8fbfd 0%, #eef4f8 55%, #f4f6fc 100%) !important;
+}
+
+.monoframe-admin .container-xxl.container-p-y,
+.monoframe-admin .container-xxl.flex-grow-1.container-p-y {
+  padding-top: 1.5rem !important;
+  padding-bottom: 2rem !important;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+.monoframe-admin #layout-menu {
+  border: 0 !important;
+  color: #fff !important;
+  background: linear-gradient(180deg, #5873dc 0%, #3f58b9 44%, #2d438f 100%) !important;
+  box-shadow: 16px 0 34px rgba(45, 67, 143, 0.14) !important;
+}
+
+.monoframe-admin #layout-menu .app-brand {
+  min-height: 86px !important;
+  padding: 24px 22px 18px 26px !important;
+  border-bottom: 0 !important;
+  margin-bottom: 4px !important;
+}
+
+.monoframe-admin #layout-menu .app-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.monoframe-admin #layout-menu .app-brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.monoframe-admin #layout-menu .app-brand-logo img {
+  width: 28px !important;
+  height: 28px !important;
+  object-fit: contain !important;
+}
+
+.monoframe-admin #layout-menu .app-brand-text {
+  color: #fff !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+}
+
+.monoframe-admin #layout-menu .layout-menu-toggle,
+.monoframe-admin #layout-menu .menu-icon,
+.monoframe-admin #layout-menu .icon-base {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.monoframe-admin #layout-menu .menu-divider,
+.monoframe-admin #layout-menu .menu-inner-shadow,
+.monoframe-admin #layout-menu .menu-header::before,
+.monoframe-admin #layout-menu .menu-header::after,
+.monoframe-admin #layout-menu .menu-header-text::before,
+.monoframe-admin #layout-menu .menu-header-text::after {
+  display: none !important;
+  content: none !important;
+}
+
+.monoframe-admin #layout-menu .menu-inner {
+  height: calc(100vh - 168px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 14px 16px !important;
+}
+
+.monoframe-admin #layout-menu .menu-inner::-webkit-scrollbar {
+  width: 4px;
+}
+
+.monoframe-admin #layout-menu .menu-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+}
+
+.monoframe-admin #layout-menu .menu-header {
+  margin: 18px 0 8px !important;
+  padding: 0 12px !important;
+}
+
+.monoframe-admin #layout-menu .menu-header-text {
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em;
+}
+
+.monoframe-admin #layout-menu .menu-item {
+  margin: 5px 0 !important;
+}
+
+.monoframe-admin #layout-menu .menu-link {
+  min-height: 46px;
+  padding: 0 15px !important;
+  border-radius: 18px !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-weight: 700 !important;
+  transition: 0.18s ease !important;
+}
+
+.monoframe-admin #layout-menu .menu-link div {
+  color: inherit !important;
+  font-weight: 700 !important;
+}
+
+.monoframe-admin #layout-menu .menu-icon,
+.monoframe-admin #layout-menu .icon-base {
+  font-size: 20px !important;
+  margin-right: 10px !important;
+}
+
+.monoframe-admin #layout-menu .menu-link:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  color: #fff !important;
+}
+
+.monoframe-admin #layout-menu .menu-item.active > .menu-link,
+.monoframe-admin #layout-menu .menu-item.open > .menu-link {
+  background: #fff !important;
+  color: var(--mf-deep-dark) !important;
+  box-shadow: 0 12px 24px rgba(22, 39, 95, 0.14) !important;
+}
+
+.monoframe-admin #layout-menu .menu-item.active > .menu-link div,
+.monoframe-admin #layout-menu .menu-item.active > .menu-link i,
+.monoframe-admin #layout-menu .menu-item.open > .menu-link div,
+.monoframe-admin #layout-menu .menu-item.open > .menu-link i {
+  color: var(--mf-deep-dark) !important;
+}
+
+.monoframe-admin #layout-menu .menu-sub {
+  margin-top: 6px !important;
+}
+
+.monoframe-admin #layout-menu .menu-sub .menu-link {
+  min-height: 40px;
+  padding-left: 18px !important;
+  background: transparent !important;
+}
+
+/* =========================================================
+   LOGOUT SIDEBAR
+========================================================= */
+.monoframe-admin .menu-logout-section {
+  padding: 12px 18px 22px;
+}
+
+.monoframe-admin .menu-logout-form {
+  margin: 0;
+}
+
+.monoframe-admin .menu-logout-btn {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: 0.18s ease;
+}
+
+.monoframe-admin .menu-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.monoframe-admin .menu-logout-btn i {
+  font-size: 19px;
+}
+
+/* =========================================================
+   NAVBAR
+========================================================= */
+.monoframe-admin .layout-navbar,
+.monoframe-admin .navbar-detached {
+  min-height: 92px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: var(--mf-shadow-soft) !important;
+}
+
+.monoframe-admin .layout-navbar :is(input, .form-control) {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--mf-ink) !important;
+}
+
+.monoframe-admin .layout-navbar :is(input, .form-control)::placeholder {
+  color: #8fa0b3 !important;
+}
+
+.monoframe-admin .monoframe-navbar-custom {
+  min-height: 92px;
+  gap: 16px;
+}
+
+.monoframe-admin .monoframe-navbar-greeting {
+  font-size: 15px;
+  font-weight: 700;
+  color: #6fb5ff;
+  white-space: nowrap;
+}
+
+.monoframe-admin .monoframe-navbar-greeting span {
+  color: #2f80ed;
+  font-weight: 900;
+}
+
+.monoframe-admin .monoframe-navbar-profile-card {
+  min-width: 230px;
+  height: 68px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 22px;
+  background: #f3f7fb;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  transition: 0.18s ease;
+}
+
+.monoframe-admin .monoframe-navbar-profile-card:hover {
+  background: #edf3fb;
+}
+
+.monoframe-admin .monoframe-navbar-profile-photo {
+  width: 52px;
+  height: 52px;
+  border-radius: 17px;
+  object-fit: cover;
+  background: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(52, 79, 165, 0.12);
+}
+
+.monoframe-admin .monoframe-navbar-profile-info {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.monoframe-admin .monoframe-navbar-profile-name,
+.monoframe-admin .monoframe-navbar-profile-role {
+  max-width: 122px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monoframe-admin .monoframe-navbar-profile-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--mf-ink);
+}
+
+.monoframe-admin .monoframe-navbar-profile-role {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7c93;
+  margin-top: 5px;
+}
+
+.monoframe-admin .monoframe-navbar-profile-arrow {
+  font-size: 20px;
+  color: #6b7c93;
+}
+
+/* =========================================================
+   GLOBAL COMPONENTS
+========================================================= */
+.monoframe-admin h1,
+.monoframe-admin h2,
+.monoframe-admin h3,
+.monoframe-admin h4,
+.monoframe-admin h5,
+.monoframe-admin h6 {
+  color: var(--mf-ink);
+}
+
+.monoframe-admin :is(h4.fw-bold, h4.card-title, .card-title, h5.card-title, .card-header h5) {
+  color: var(--mf-ink) !important;
+  font-weight: 800 !important;
+}
+
+.monoframe-admin :is(.text-muted, small.text-muted, .card-header small) {
+  color: var(--mf-muted) !important;
+  font-weight: 600;
+}
+
+.monoframe-admin .card,
+.monoframe-admin .section-card,
+.monoframe-admin .stat-card {
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: var(--mf-shadow-soft) !important;
+  overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease !important;
+}
+
+.monoframe-admin .card {
+  border-radius: 24px !important;
+}
+
+.monoframe-admin .section-card {
+  border-radius: 30px !important;
+}
+
+.monoframe-admin .stat-card {
+  position: relative;
+  border-radius: 26px !important;
+}
+
+.monoframe-admin .card-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--mf-border) !important;
+  padding: 22px 26px !important;
+}
+
+.monoframe-admin .card-body {
+  padding: 22px 26px !important;
+}
+
+.monoframe-admin .card-footer {
+  background: #fff !important;
+  border-top: 1px solid var(--mf-border) !important;
+  padding: 18px 26px !important;
+}
+
+.monoframe-admin .card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 46px rgba(52, 79, 165, 0.16) !important;
+}
+
+/* =========================================================
+   TABLE, FORM, BUTTON, BADGE, MODAL
+========================================================= */
+.monoframe-admin .table-responsive {
+  border-radius: 0 0 24px 24px;
+}
+
+.monoframe-admin .table {
+  margin-bottom: 0 !important;
+}
+
+.monoframe-admin .table thead th {
+  background: #f4f7fb !important;
+  color: #6e7f96 !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+  font-weight: 800 !important;
+  border-bottom: 1px solid var(--mf-border) !important;
+  padding: 15px 18px !important;
+  white-space: nowrap;
+}
+
+.monoframe-admin .table tbody td {
+  padding: 16px 18px !important;
+  vertical-align: middle !important;
+  border-color: var(--mf-border) !important;
+  color: var(--mf-ink) !important;
+}
+
+.monoframe-admin .table tbody tr {
+  transition: background 0.18s ease !important;
+}
+
+.monoframe-admin .table tbody tr:hover {
+  background: #f7fbfd !important;
+}
+
+.monoframe-admin .btn {
+  border-radius: 14px !important;
+  font-weight: 800 !important;
+  transition: 0.18s ease !important;
+}
+
+.monoframe-admin .btn:hover {
+  transform: translateY(-2px);
+}
+
+.monoframe-admin .btn-primary {
+  background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue)) !important;
+  border: 0 !important;
+  color: #fff !important;
+  box-shadow: 0 12px 24px rgba(88, 115, 220, 0.22);
+}
+
+.monoframe-admin .btn-outline-primary {
+  color: var(--mf-primary) !important;
+  border-color: rgba(88, 115, 220, 0.34) !important;
+  background: rgba(88, 115, 220, 0.05) !important;
+}
+
+.monoframe-admin .btn-outline-primary:hover {
+  color: #fff !important;
+  background: var(--mf-primary) !important;
+}
+
+.monoframe-admin .btn-outline-secondary {
+  border-color: var(--mf-border) !important;
+  color: var(--mf-muted) !important;
+}
+
+.monoframe-admin .btn-outline-secondary:hover {
+  background: var(--mf-primary-soft) !important;
+  color: var(--mf-primary) !important;
+}
+
+.monoframe-admin :is(.btn-danger, .btn-outline-danger:hover) {
+  border: 0 !important;
+  background: linear-gradient(135deg, #ef5350, #ff7a74) !important;
+  color: #fff !important;
+}
+
+.monoframe-admin .btn-outline-danger {
+  color: var(--mf-danger) !important;
+  border-color: rgba(239, 83, 80, 0.4) !important;
+  background: rgba(239, 83, 80, 0.04) !important;
+}
+
+.monoframe-admin :is(.form-control, .form-select) {
+  border-radius: 14px !important;
+  border-color: var(--mf-border) !important;
+  padding: 10px 14px !important;
+  color: var(--mf-ink) !important;
+  font-weight: 600;
+  background: #fff !important;
+}
+
+.monoframe-admin :is(.form-control, .form-select):focus {
+  border-color: var(--mf-primary) !important;
+  box-shadow: 0 0 0 0.18rem rgba(88, 115, 220, 0.12) !important;
+}
+
+.monoframe-admin .form-label {
+  color: var(--mf-ink) !important;
+  font-weight: 800 !important;
+  font-size: 13px;
+}
+
+.monoframe-admin .badge {
+  border-radius: 999px !important;
+  font-weight: 800 !important;
+  padding: 0.45rem 0.72rem !important;
+}
+
+.monoframe-admin .bg-label-primary {
+  color: var(--mf-primary) !important;
+  background: rgba(88, 115, 220, 0.12) !important;
+}
+
+.monoframe-admin .bg-label-info {
+  color: var(--mf-blue) !important;
+  background: rgba(13, 111, 168, 0.13) !important;
+}
+
+.monoframe-admin .bg-label-warning {
+  color: #9c6b12 !important;
+  background: rgba(242, 169, 59, 0.15) !important;
+}
+
+.monoframe-admin .bg-label-success {
+  color: #167a64 !important;
+  background: rgba(47, 177, 140, 0.14) !important;
+}
+
+.monoframe-admin .bg-label-danger {
+  color: #c43f3c !important;
+  background: rgba(239, 83, 80, 0.13) !important;
+}
+
+.monoframe-admin .bg-label-secondary {
+  color: #607086 !important;
+  background: rgba(107, 124, 147, 0.14) !important;
+}
+
+.monoframe-admin .modal-content {
+  border: 0 !important;
+  border-radius: 28px !important;
+  overflow: hidden;
+  box-shadow: 0 30px 70px rgba(52, 79, 165, 0.22);
+}
+
+.monoframe-admin .modal-header {
+  background: linear-gradient(135deg, var(--mf-deep), var(--mf-primary) 58%, var(--mf-blue)) !important;
+  color: #fff !important;
+  border-bottom: 0 !important;
+  padding: 24px 28px !important;
+}
+
+.monoframe-admin .modal-header .modal-title {
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+
+.monoframe-admin .modal-header .btn-close {
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+.monoframe-admin .modal-body {
+  background: #f7fbfd !important;
+  padding: 24px 28px !important;
+}
+
+.monoframe-admin .modal-footer {
+  background: #fff !important;
+  border-top: 1px solid var(--mf-border) !important;
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+.monoframe-admin .dashboard-shell {
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.monoframe-admin .dashboard-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.monoframe-admin .dashboard-kicker,
+.monoframe-admin .mf-badge-total,
+.monoframe-admin .activity-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  background: rgba(88, 115, 220, 0.10);
+  color: var(--mf-primary);
+  font-weight: 800;
+  margin-bottom: 14px !important;
+}
+
+.monoframe-admin .dashboard-kicker {
+  padding: 8px 13px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.monoframe-admin .mf-badge-total,
+.monoframe-admin .activity-count-pill {
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.monoframe-admin .dashboard-title {
+  color: var(--mf-ink);
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.monoframe-admin .dashboard-date {
+  font-size: 14px;
+  color: var(--mf-muted);
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+.monoframe-admin .dashboard-top-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 17px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--mf-border);
+  color: var(--mf-ink);
+  font-weight: 800;
+  box-shadow: var(--mf-shadow-soft);
+}
+
+.monoframe-admin .greeting-card {
+  position: relative;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 32px !important;
+  min-height: 245px;
+  margin-bottom: 26px;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.82) 0 11%, transparent 12%),
+    radial-gradient(circle at 88% 84%, rgba(159, 191, 210, 0.38), transparent 27%),
+    linear-gradient(135deg, #344fa5 0%, #0d6fa8 54%, #9fbfd2 100%) !important;
+  box-shadow: var(--mf-shadow) !important;
+}
+
+.monoframe-admin .greeting-card::before,
+.monoframe-admin .greeting-card::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.monoframe-admin .greeting-card::before {
+  width: 340px;
+  height: 340px;
+  top: -155px;
+  right: 100px;
+}
+
+.monoframe-admin .greeting-card::after {
+  width: 270px;
+  height: 270px;
+  bottom: -148px;
+  right: -52px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.monoframe-admin .greeting-content {
+  position: relative;
+  z-index: 2;
+  min-height: 245px;
+  padding: 38px 42px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+}
+
+.monoframe-admin .greeting-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  margin-bottom: 18px;
+}
+
+.monoframe-admin .greeting-title {
+  color: #fff;
+  font-size: 38px;
+  line-height: 1.18;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.monoframe-admin .greeting-subtitle {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  line-height: 1.8;
+  max-width: 680px;
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+.monoframe-admin .greeting-visual {
+  position: relative;
+  width: 292px;
+  min-width: 292px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.monoframe-admin .greeting-logo-circle {
+  width: 138px;
+  height: 138px;
+  border-radius: 38px;
+  background: rgba(255, 255, 255, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 28px 55px rgba(0, 0, 0, 0.18);
+  z-index: 3;
+  transform: rotate(-3deg);
+  transition: 0.24s ease !important;
+}
+
+.monoframe-admin .greeting-logo-circle img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.monoframe-admin .greeting-camera-card {
+  display: none !important;
+}
+
+.monoframe-admin .greeting-bubble {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.monoframe-admin .greeting-bubble.one {
+  width: 18px;
+  height: 18px;
+  left: 28px;
+  top: 22px;
+}
+
+.monoframe-admin .greeting-bubble.two {
+  width: 12px;
+  height: 12px;
+  right: 40px;
+  top: 4px;
+}
+
+.monoframe-admin .greeting-bubble.three {
+  width: 30px;
+  height: 30px;
+  left: 18px;
+  bottom: 20px;
+  background: rgba(255, 255, 255, 0.20);
+}
+
+.monoframe-admin .greeting-card:hover,
+.monoframe-admin .section-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 58px rgba(52, 79, 165, 0.20) !important;
+}
+
+.monoframe-admin .greeting-card:hover .greeting-logo-circle {
+  transform: rotate(-3deg) translateY(-4px) scale(1.03);
+}
+
+/* =========================================================
+   STATS, FINANCE, ACTIVITY
+========================================================= */
+.monoframe-admin .stat-card::after {
+  content: "";
+  position: absolute;
+  width: 118px;
+  height: 118px;
+  border-radius: 999px;
+  right: -50px;
+  top: -50px;
+  background: linear-gradient(135deg, rgba(88, 115, 220, 0.10), rgba(159, 191, 210, 0.24));
+}
+
+.monoframe-admin .stat-card:hover {
+  transform: translateY(-7px) scale(1.015);
+  box-shadow: 0 26px 54px rgba(52, 79, 165, 0.20) !important;
+}
+
+.monoframe-admin .stat-card .card-body {
+  position: relative;
+  z-index: 2;
+  padding: 24px !important;
+}
+
+.monoframe-admin .stat-label,
+.monoframe-admin .finance-label {
+  color: var(--mf-muted);
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.monoframe-admin .stat-number {
+  color: var(--mf-ink);
+  font-size: 34px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.monoframe-admin .stat-helper {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mf-muted);
+}
+
+.monoframe-admin .stat-icon,
+.monoframe-admin .finance-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+  transition: 0.22s ease !important;
+}
+
+.monoframe-admin .stat-icon {
+  font-size: 24px;
+}
+
+.monoframe-admin .finance-icon {
+  width: 46px;
+  height: 46px;
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+
+.monoframe-admin :is(.stat-card:hover .stat-icon, .finance-item:hover .finance-icon) {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 16px 30px rgba(88, 115, 220, 0.26) !important;
+}
+
+.monoframe-admin .finance-card {
+  margin-bottom: 26px;
+}
+
+.monoframe-admin .finance-item {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  padding: 24px;
+  border: 1px solid var(--mf-border);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(159, 191, 210, 0.30), transparent 36%),
+    linear-gradient(180deg, #fff 0%, #f7fbfd 100%);
+  transition: 0.22s ease !important;
+}
+
+.monoframe-admin .finance-item:hover {
+  transform: translateY(-6px);
+  border-color: rgba(88, 115, 220, 0.30) !important;
+  box-shadow: 0 22px 42px rgba(52, 79, 165, 0.15) !important;
+}
+
+.monoframe-admin .finance-value {
+  color: var(--mf-ink);
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
+.monoframe-admin .activity-card .card-header,
+.monoframe-admin .activity-card-header {
+  padding: 30px 34px 26px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 20px !important;
+}
+
+.monoframe-admin .activity-card > .table-responsive {
+  margin: 24px 24px 24px !important;
+  border: 1px solid var(--mf-border) !important;
+  border-radius: 22px !important;
+  overflow: hidden !important;
+  background: #fff !important;
+}
+
+.monoframe-admin .activity-card > .table-responsive table :is(th, td) {
+  padding: 20px !important;
+}
+
+.monoframe-admin .activity-cell {
+  min-width: 420px;
+  line-height: 1.75 !important;
+  color: #435366;
+  font-weight: 600;
+  padding-right: 28px !important;
+}
+
+.monoframe-admin .activity-name {
+  display: inline-block;
+  color: var(--mf-ink);
+  font-weight: 800;
+  line-height: 1.45 !important;
+}
+
+.monoframe-admin .activity-time {
+  font-size: 13px;
+  color: #526b7f;
+  font-weight: 800;
+}
+
+.monoframe-admin .activity-more-wrap {
+  margin: 0 26px 26px !important;
+  border: 1px solid var(--mf-border) !important;
+  border-top: 0 !important;
+  border-radius: 0 0 22px 22px !important;
+  padding: 18px 20px !important;
+  text-align: center;
+  background: #fff !important;
+}
+
+.monoframe-admin .activity-filter-empty {
+  display: none;
+  text-align: center;
+  padding: 38px 20px;
+  color: var(--mf-muted);
+  border: 1px dashed var(--mf-sky);
+  border-radius: 22px;
+  margin-top: 16px;
+  background: #fff;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 1199.98px) {
+  .monoframe-admin #layout-menu {
+    position: fixed !important;
+  }
+}
+
+@media (max-width: 992px) {
+  .monoframe-admin .greeting-content {
+    padding: 30px;
+  }
+
+  .monoframe-admin .greeting-title {
+    font-size: 31px;
+  }
+
+  .monoframe-admin .greeting-visual {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .monoframe-admin .greeting-logo-circle {
+    width: 118px;
+    height: 118px;
+  }
+
+  .monoframe-admin .greeting-logo-circle img {
+    width: 76px;
+    height: 76px;
+  }
+}
+
+@media (max-width: 768px) {
+  .monoframe-admin .dashboard-title {
+    font-size: 25px;
+  }
+
+  .monoframe-admin .greeting-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .monoframe-admin .greeting-visual {
+    align-self: center;
+  }
+
+  .monoframe-admin .activity-cell {
+    min-width: 280px;
+  }
+
+  .monoframe-admin .monoframe-navbar-greeting {
+    font-size: 12px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .monoframe-admin .monoframe-navbar-profile-card {
+    min-width: auto;
+    width: 46px;
+    padding: 6px;
+    justify-content: center;
+  }
+
+  .monoframe-admin .monoframe-navbar-profile-info,
+  .monoframe-admin .monoframe-navbar-profile-arrow {
+    display: none;
+  }
+
+  .monoframe-admin .monoframe-navbar-profile-photo {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+#calendarBookingSummaryModal .modal-footer {
+  padding-top: 26px !important;
+  padding-bottom: 30px !important;
+  align-items: flex-end !important;
+}
+
+#calendarBookingSummaryModal .modal-footer .btn {
+  margin-top: 10px !important;
+}

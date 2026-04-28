@@ -3,10 +3,10 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\RolePermission;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Models\RolePermission;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -25,6 +25,7 @@ class User extends Authenticatable
     'email',
     'phone',
     'address',
+    'profile_photo',
     'role',
     'is_active',
     'password',
@@ -51,8 +52,10 @@ class User extends Authenticatable
     return [
       'email_verified_at' => 'datetime',
       'password' => 'hashed',
+      'is_active' => 'boolean',
     ];
   }
+
   public function hasPermission(string $permissionKey): bool
   {
     if (($this->role ?? null) === 'Admin') {
@@ -67,6 +70,7 @@ class User extends Authenticatable
       ->where('permission_key', $permissionKey)
       ->exists();
   }
+
   public function photographerBookings()
   {
     return $this->hasMany(\App\Models\ScheduleBooking::class, 'photographer_user_id');

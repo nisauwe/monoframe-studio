@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\PrintPriceController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CallCenterContactController;
+use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\ProfileController;
 
 Route::get('/', function () {
   return redirect()->route('admin.login');
@@ -37,7 +39,15 @@ Route::post('/reset-password', [AdminResetPasswordController::class, 'reset'])
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->group(function () {
   Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+  Route::post('/payments/incomes', [AdminPaymentController::class, 'storeIncome'])->name('payments.incomes.store');
+  Route::delete('/payments/incomes/{income}', [AdminPaymentController::class, 'destroyIncome'])->name('payments.incomes.destroy');
+
+  Route::post('/payments/expenses', [AdminPaymentController::class, 'storeExpense'])->name('payments.expenses.store');
+  Route::delete('/payments/expenses/{expense}', [AdminPaymentController::class, 'destroyExpense'])->name('payments.expenses.destroy');
   Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
+
+  Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+  Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -55,11 +65,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
   Route::middleware(['auth', 'admin.only'])->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile/photo', [ProfileController::class, 'destroyPhoto'])->name('profile.photo.destroy');
   });
 
   Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.manage')->name('users.index');
   Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
   Route::post('/users', [UserController::class, 'store'])->name('users.store');
+
+  Route::get('/users/export/excel', [UserController::class, 'exportExcel'])->middleware('permission:users.manage')->name('users.export.excel');
+  Route::get('/users/export/pdf', [UserController::class, 'exportPdf'])->middleware('permission:users.manage')->name('users.export.pdf');
 
   Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
   Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
@@ -100,8 +117,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
   Route::get('/schedules/available-photographers', [ScheduleController::class, 'availablePhotographers'])->name('schedules.available-photographers');
   Route::post('/schedules/manual-request', [ScheduleController::class, 'storeManualRequest'])->name('schedules.manual-request.store');
 
-  Route::put('/schedules/addon-settings', [ScheduleController::class, 'updateAddonSettings'])
-    ->name('schedules.addon-settings.update');
+  Route::put('/schedules/addon-settings', [ScheduleController::class, 'updateAddonSettings'])->name('schedules.addon-settings.update');
 
   Route::get('/calendar', [CalendarController::class, 'index'])->middleware('permission:calendar.view')->name('calendar.index');
   Route::post('/calendar', [CalendarController::class, 'store'])->name('calendar.store');
@@ -132,7 +148,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
   Route::delete('/call-center/{callCenter}', [CallCenterContactController::class, 'destroy'])->name('call-center.destroy');
   Route::patch('/call-center/{callCenter}/toggle-status', [CallCenterContactController::class, 'toggleStatus'])->name('call-center.toggle-status');
 
-  Route::get('/profile', function () {
-    return view('profile.index');
-  })->name('profile.index');
+  
 });

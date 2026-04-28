@@ -8,6 +8,7 @@ use App\Models\Package;
 use App\Models\ScheduleBooking;
 use App\Models\ScheduleRule;
 use App\Models\User;
+use App\Services\BookingTrackingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -17,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 
 class ScheduleController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, BookingTrackingService $trackingService)
     {
         $this->seedDefaultRules();
 
@@ -62,6 +63,101 @@ class ScheduleController extends Controller
             ->filter(fn($slot) => $slot->booked_count < $slot->capacity_total)
             ->count();
 
+        $bookingMonitoringFilter = $request->get('booking_filter', 'need_payment');
+        $bookingMonitoringSearch = trim((string) $request->get('booking_search', ''));
+
+        $allowedBookingMonitoringFilters = [
+            'all',
+            'need_payment',
+            'running',
+            'completed',
+        ];
+
+        if (!in_array($bookingMonitoringFilter, $allowedBookingMonitoringFilters, true)) {
+            $bookingMonitoringFilter = 'need_payment';
+        }
+
+        $bookingMonitoringQuery = ScheduleBooking::with([
+            'package',
+            'clientUser',
+            'photographerUser',
+            'payments',
+            'photoLink',
+            'editRequest.editor',
+            'printOrder',
+            'review',
+            'trackings',
+        ])
+            ->whereIn('status', ['pending', 'confirmed', 'completed']);
+
+        if ($bookingMonitoringSearch !== '') {
+            $bookingMonitoringQuery->where(function ($query) use ($bookingMonitoringSearch) {
+                $query->where('client_name', 'like', '%' . $bookingMonitoringSearch . '%')
+                    ->orWhere('client_phone', 'like', '%' . $bookingMonitoringSearch . '%')
+                    ->orWhere('photographer_name', 'like', '%' . $bookingMonitoringSearch . '%')
+                    ->orWhereHas('package', function ($packageQuery) use ($bookingMonitoringSearch) {
+                        $packageQuery->where('name', 'like', '%' . $bookingMonitoringSearch . '%');
+                    });
+            });
+        }
+
+        $bookingMonitoringAll = $bookingMonitoringQuery
+            ->orderByDesc('booking_date')
+            ->orderByDesc('start_time')
+            ->get()
+            ->map(function (ScheduleBooking $booking) use ($trackingService) {
+                $trackingService->syncTrackingState($booking);
+
+                $booking->load([
+                    'package',
+                    'clientUser',
+                    'photographerUser',
+                    'payments',
+                    'photoLink',
+                    'editRequest.editor',
+                    'printOrder',
+                    'review',
+                    'trackings',
+                ]);
+
+                $timeline = $booking->trackings
+                    ->sortBy('stage_order')
+                    ->values();
+
+                $category = $this->bookingMonitoringCategory($booking, $timeline);
+                $currentTracking = $timeline->firstWhere('status', 'current');
+                $doneCount = $timeline
+                    ->whereIn('status', ['done', 'skipped'])
+                    ->count();
+
+                $progressPercent = $timeline->count() > 0
+                    ? (int) round(($doneCount / $timeline->count()) * 100)
+                    : 0;
+
+                return [
+                    'booking' => $booking,
+                    'timeline' => $timeline,
+                    'category' => $category,
+                    'category_label' => $this->bookingMonitoringCategoryLabel($category),
+                    'category_badge' => $this->bookingMonitoringCategoryBadge($category),
+                    'current_tracking' => $currentTracking,
+                    'progress_percent' => $progressPercent,
+                    'payment_label' => $this->bookingPaymentStatusLabel($booking),
+                    'payment_badge' => $this->bookingPaymentStatusBadge($booking),
+                ];
+            });
+
+        $bookingMonitoringStats = [
+            'all' => $bookingMonitoringAll->count(),
+            'need_payment' => $bookingMonitoringAll->where('category', 'need_payment')->count(),
+            'running' => $bookingMonitoringAll->where('category', 'running')->count(),
+            'completed' => $bookingMonitoringAll->where('category', 'completed')->count(),
+        ];
+
+        $bookingMonitoringList = $bookingMonitoringFilter === 'all'
+            ? $bookingMonitoringAll
+            : $bookingMonitoringAll->where('category', $bookingMonitoringFilter)->values();
+
         return view('admin.schedules.index', compact(
             'rules',
             'selectedDate',
@@ -79,8 +175,104 @@ class ScheduleController extends Controller
             'board',
             'bookedSessionsToday',
             'availableStudioSlots',
-            'videoAddons'
+            'videoAddons',
+            'bookingMonitoringFilter',
+            'bookingMonitoringSearch',
+            'bookingMonitoringStats',
+            'bookingMonitoringList'
         ));
+    }
+
+    private function bookingMonitoringCategory(ScheduleBooking $booking, Collection $timeline): string
+    {
+        $reviewDone = $timeline
+            ->where('stage_key', 'review')
+            ->where('status', 'done')
+            ->isNotEmpty();
+
+        $printDoneOrSkipped = $timeline
+            ->where('stage_key', 'print')
+            ->whereIn('status', ['done', 'skipped'])
+            ->isNotEmpty();
+
+        if (
+            $booking->status === 'completed'
+            || $booking->review
+            || $reviewDone
+            || (
+                $booking->editRequest
+                && $booking->editRequest->status === 'completed'
+                && $printDoneOrSkipped
+            )
+        ) {
+            return 'completed';
+        }
+
+        if (!$booking->isFullyPaid()) {
+            return 'need_payment';
+        }
+
+        return 'running';
+    }
+
+    private function bookingMonitoringCategoryLabel(string $category): string
+    {
+        return match ($category) {
+            'need_payment' => 'Belum Pelunasan',
+            'running' => 'Sedang Berjalan',
+            'completed' => 'Selesai',
+            default => 'Semua Booking',
+        };
+    }
+
+    private function bookingMonitoringCategoryBadge(string $category): string
+    {
+        return match ($category) {
+            'need_payment' => 'warning',
+            'running' => 'info',
+            'completed' => 'success',
+            default => 'secondary',
+        };
+    }
+
+    private function bookingPaymentStatusLabel(ScheduleBooking $booking): string
+    {
+        if ($booking->isFullyPaid()) {
+            return 'Lunas';
+        }
+
+        if ($booking->isDpPaid()) {
+            return 'DP Dibayar';
+        }
+
+        return match ($booking->payment_status) {
+            'unpaid' => 'Belum Bayar',
+            'pending' => 'Menunggu Pembayaran',
+            'failed' => 'Pembayaran Gagal',
+            'dp_paid' => 'DP Dibayar',
+            'partially_paid' => 'Sebagian Dibayar',
+            'paid', 'fully_paid' => 'Lunas',
+            default => ucfirst((string) ($booking->payment_status ?? 'Belum Bayar')),
+        };
+    }
+
+    private function bookingPaymentStatusBadge(ScheduleBooking $booking): string
+    {
+        if ($booking->isFullyPaid()) {
+            return 'success';
+        }
+
+        if ($booking->isDpPaid()) {
+            return 'warning';
+        }
+
+        return match ($booking->payment_status) {
+            'unpaid', 'pending' => 'danger',
+            'failed' => 'danger',
+            'dp_paid', 'partially_paid' => 'warning',
+            'paid', 'fully_paid' => 'success',
+            default => 'secondary',
+        };
     }
 
     public function updateRules(Request $request)

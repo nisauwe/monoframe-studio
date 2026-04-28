@@ -15,24 +15,22 @@ class CategoryController extends Controller
 
   public function store(Request $request)
   {
-    $validated = $request->validate([
-      'name' => ['required', 'string', 'max:255', 'unique:categories,name'],
-      'description' => ['nullable', 'string'],
-      'is_active' => ['nullable', 'boolean'],
-    ], [
-      'name.required' => 'Nama kategori wajib diisi.',
-      'name.unique' => 'Nama kategori sudah digunakan.',
-    ]);
+      $validated = $request->validate([
+          'name' => ['required', 'string', 'max:255'],
+          'description' => ['nullable', 'string'],
+          'is_active' => ['nullable', 'boolean'],
+      ]);
 
-    Category::create([
-      'name' => $validated['name'],
-      'description' => $validated['description'] ?? null,
-      'is_active' => $request->has('is_active'),
-    ]);
+      $validated['is_active'] = $request->boolean('is_active');
 
-    return redirect()
-      ->route('admin.packages.index')
-      ->with('success', 'Kategori berhasil ditambahkan.');
+      $category = Category::create($validated);
+
+      return redirect()
+          ->route('admin.packages.index', [
+              'tab' => 'categories',
+              'category' => $category->id,
+          ])
+          ->with('success', 'Kategori berhasil ditambahkan.');
   }
   public function toggleStatus(Request $request, Category $category)
   {

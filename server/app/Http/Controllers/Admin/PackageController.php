@@ -14,6 +14,7 @@ class PackageController extends Controller
   public function index(Request $request)
   {
     $activeTab = $request->get('tab', 'categories');
+
     $selectedCategory = null;
     $packages = collect();
     $discounts = collect();
@@ -23,6 +24,10 @@ class PackageController extends Controller
       ->get();
 
     $totalCategories = Category::count();
+    $totalPhotoPackages = Package::count();
+    $totalPrintPrices = PrintPrice::count();
+
+    $activeCategories = Category::where('is_active', true)->count();
 
     $activePackages = Package::where('is_active', true)->count();
 
@@ -34,18 +39,29 @@ class PackageController extends Controller
       $selectedCategory = Category::find($request->category);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Paket Foto
+    |--------------------------------------------------------------------------
+    | Di tab paket foto, semua paket di-load dulu.
+    | Filter kategori dilakukan realtime di frontend dengan JavaScript,
+    | jadi klik kategori tidak refresh halaman.
+    */
     if ($activeTab === 'photo-packages') {
-      $packagesQuery = Package::with(['category', 'discounts'])->orderBy('name');
-
-      if ($selectedCategory) {
-        $packagesQuery->where('category_id', $selectedCategory->id);
-      }
-
-      $packages = $packagesQuery->get();
+      $packages = Package::with(['category', 'discounts'])
+        ->orderBy('name')
+        ->get();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Diskon
+    |--------------------------------------------------------------------------
+    | Diskon tetap boleh pakai filter kategori dari URL.
+    */
     if ($activeTab === 'discounts') {
-      $discountsQuery = Discount::with(['category', 'packages'])->latest();
+      $discountsQuery = Discount::with(['category', 'packages'])
+        ->latest();
 
       if ($selectedCategory) {
         $discountsQuery->where('category_id', $selectedCategory->id);
@@ -58,17 +74,18 @@ class PackageController extends Controller
       ->latest()
       ->get();
 
-    $totalPrintPrices = PrintPrice::count();
     $activePrintPrices = PrintPrice::where('is_active', true)->count();
     $inactivePrintPrices = PrintPrice::where('is_active', false)->count();
 
     return view('admin.packages.index', compact(
       'activeTab',
+      'activeCategories',
       'categories',
       'selectedCategory',
       'packages',
       'discounts',
       'totalCategories',
+      'totalPhotoPackages',
       'activePackages',
       'discountPackages',
       'printPrices',
@@ -77,9 +94,12 @@ class PackageController extends Controller
       'inactivePrintPrices'
     ));
   }
+
   public function create()
   {
-    $categories = Category::where('is_active', true)->orderBy('name')->get();
+    $categories = Category::where('is_active', true)
+      ->orderBy('name')
+      ->get();
 
     return view('admin.packages.create', compact('categories'));
   }
@@ -115,9 +135,12 @@ class PackageController extends Controller
     Package::create($validated);
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $validated['category_id']])
+      ->route('admin.packages.index', [
+        'tab' => 'photo-packages',
+      ])
       ->with('success', 'Paket berhasil ditambahkan.');
   }
+
   public function edit(Package $package)
   {
     $categories = Category::where('is_active', true)
@@ -160,18 +183,20 @@ class PackageController extends Controller
     $package->update($validated);
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $validated['category_id']])
+      ->route('admin.packages.index', [
+        'tab' => 'photo-packages',
+      ])
       ->with('success', 'Paket berhasil diperbarui.');
   }
 
   public function destroy(Package $package)
   {
-    $categoryId = $package->category_id;
-
     $package->delete();
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $categoryId])
+      ->route('admin.packages.index', [
+        'tab' => 'photo-packages',
+      ])
       ->with('success', 'Paket berhasil dihapus.');
   }
 
@@ -182,7 +207,9 @@ class PackageController extends Controller
     ]);
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $package->category_id])
+      ->route('admin.packages.index', [
+        'tab' => 'photo-packages',
+      ])
       ->with('success', 'Status paket berhasil diperbarui.');
   }
 
@@ -208,7 +235,9 @@ class PackageController extends Controller
     ]);
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $package->category_id])
+      ->route('admin.packages.index', [
+        'tab' => 'photo-packages',
+      ])
       ->with('success', 'Diskon paket berhasil diperbarui.');
   }
 
@@ -219,7 +248,9 @@ class PackageController extends Controller
     ]);
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $package->category_id])
+      ->route('admin.packages.index', [
+        'tab' => 'photo-packages',
+      ])
       ->with('success', 'Status diskon berhasil diperbarui.');
   }
 }

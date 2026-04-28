@@ -28,7 +28,7 @@
       "slug": "admin.schedules.index"
     },
     {
-      "menuHeader": "Akses & Pembayaran"
+      "menuHeader": "Operasional"
     },
     {
       "url": "admin/calendar",
@@ -37,10 +37,13 @@
       "slug": "admin.calendar.index"
     },
     {
-      "url": "admin/roles-akses",
-      "name": "Role & Akses",
-      "icon": "menu-icon icon-base bx bx-lock-open-alt",
-      "slug": "admin.roles-akses.index"
+      "url": "admin/reviews",
+      "name": "Hasil Review",
+      "icon": "menu-icon icon-base bx bx-star",
+      "slug": "admin.reviews.index"
+    },
+    {
+      "menuHeader": "Keuangan"
     },
     {
       "url": "admin/payments",
@@ -49,13 +52,19 @@
       "slug": "admin.payments.index"
     },
     {
-      "menuHeader": "Konfigurasi"
-    },
-    {
       "url": "/admin/payment-gateway",
       "name": "Payment Gateway",
       "icon": "menu-icon icon-base bx bx-wallet",
       "slug": "admin.payment-gateway.index"
+    },
+    {
+      "menuHeader": "Sistem"
+    },
+    {
+      "url": "admin/roles-akses",
+      "name": "Role & Akses",
+      "icon": "menu-icon icon-base bx bx-lock-open-alt",
+      "slug": "admin.roles-akses.index"
     },
     {
       "name": "Pengaturan",
@@ -85,7 +94,7 @@
     {
       "url": "admin/call-center",
       "icon": "menu-icon icon-base bx bx-support",
-      "name": "WhatsApp",
+      "name": "Kontak",
       "slug": "admin.call-center.index"
     }
   ]

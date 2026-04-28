@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EditRequest;
 use App\Models\Payment;
+use App\Models\PhotoLink;
+use App\Models\PrintOrder;
 use App\Models\Review;
 use App\Models\ScheduleBooking;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,13 +22,6 @@ class DashboardController extends Controller
         'partially_paid',
         'paid',
         'fully_paid',
-    ];
-
-    private array $unpaidBookingStatuses = [
-        'unpaid',
-        'pending',
-        'failed',
-        null,
     ];
 
     private array $successfulPaymentStatuses = [
@@ -39,29 +36,12 @@ class DashboardController extends Controller
         $baseBookingQuery = ScheduleBooking::query()
             ->whereNotIn('status', ['completed', 'cancelled']);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Booking Aktif
-        |--------------------------------------------------------------------------
-        | Booking aktif = booking yang sudah membayar DP atau sudah lunas.
-        | Jadi yang dihitung:
-        | - schedule_bookings.payment_status = dp_paid / partially_paid / paid / fully_paid
-        | ATAU
-        | - punya payment settlement/capture di tabel payments
-        */
         $bookingAktif = (clone $baseBookingQuery)
             ->where(function (Builder $query) {
                 $this->applyPaidBookingFilter($query);
             })
             ->count();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Belum Bayar
-        |--------------------------------------------------------------------------
-        | Belum bayar = booking aktif yang belum punya pembayaran sukses.
-        | Jadi kalau sudah DP/lunas, tidak boleh masuk Belum Bayar.
-        */
         $belumBayar = (clone $baseBookingQuery)
             ->where(function (Builder $query) {
                 if ($this->hasBookingPaymentColumns()) {
@@ -82,13 +62,6 @@ class DashboardController extends Controller
             })
             ->count();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Jadwal Hari Ini
-        |--------------------------------------------------------------------------
-        | Jadwal hari ini hanya dihitung kalau booking sudah aktif
-        | yaitu sudah DP atau sudah lunas.
-        */
         $jadwalHariIni = ScheduleBooking::query()
             ->whereDate('booking_date', $today)
             ->whereNotIn('status', ['completed', 'cancelled'])
@@ -115,28 +88,8 @@ class DashboardController extends Controller
         $totalPengeluaran = $this->resolveTotalExpense();
         $saldoKeseluruhan = $totalPemasukan - $totalPengeluaran;
 
-        $aktivitasBooking = ScheduleBooking::with([
-                'package',
-                'latestPayment',
-                'payments',
-                'trackings',
-                'review',
-            ])
-            ->latest('booking_date')
-            ->latest('start_time')
-            ->limit(10)
-            ->get()
-            ->map(function ($booking) {
-                $activity = $this->resolveActivityStatus($booking);
-
-                $booking->dashboard_status_label = $activity['label'];
-                $booking->dashboard_status_badge = $activity['badge'];
-                $booking->dashboard_date_label = $booking->booking_date
-                    ? Carbon::parse($booking->booking_date)->translatedFormat('d M Y')
-                    : '-';
-
-                return $booking;
-            });
+        $activityNotifications = $this->buildUserActivityNotifications(250);
+        $activityNotificationsPreview = $activityNotifications->take(5)->values();
 
         return view('admin.dashboard', compact(
             'bookingAktif',
@@ -146,7 +99,8 @@ class DashboardController extends Controller
             'pemasukanHariIni',
             'pengeluaranHariIni',
             'saldoKeseluruhan',
-            'aktivitasBooking'
+            'activityNotifications',
+            'activityNotificationsPreview'
         ));
     }
 
@@ -165,97 +119,378 @@ class DashboardController extends Controller
         });
     }
 
-    private function resolveActivityStatus(ScheduleBooking $booking): array
+    private function buildUserActivityNotifications(int $limit = 250): Collection
     {
-        $paymentStatus = strtolower((string) $booking->payment_status);
+        $activities = collect();
 
-        if ($this->hasBookingPaymentColumns()) {
-            if ($paymentStatus === 'failed') {
-                return [
-                    'label' => 'Pembayaran Gagal',
-                    'badge' => 'danger',
-                ];
+        $activities = $activities
+            ->merge($this->bookingActivities())
+            ->merge($this->photographerAssignmentActivities())
+            ->merge($this->paymentActivities())
+            ->merge($this->photoLinkActivities())
+            ->merge($this->editRequestActivities())
+            ->merge($this->printOrderActivities())
+            ->merge($this->reviewActivities());
+
+        return $activities
+            ->filter(fn ($activity) => !empty($activity['occurred_at']))
+            ->sortByDesc(function ($activity) {
+                return $activity['occurred_at'] instanceof Carbon
+                    ? $activity['occurred_at']->timestamp
+                    : Carbon::parse($activity['occurred_at'])->timestamp;
+            })
+            ->take($limit)
+            ->values();
+    }
+
+    private function bookingActivities(): Collection
+    {
+        if (!Schema::hasTable('schedule_bookings')) {
+            return collect();
+        }
+
+        return ScheduleBooking::with(['package', 'clientUser'])
+            ->latest('created_at')
+            ->limit(120)
+            ->get()
+            ->map(function (ScheduleBooking $booking) {
+                $clientName = $booking->clientUser?->name
+                    ?? $booking->client_name
+                    ?? 'Klien';
+
+                $role = ($booking->source ?? null) === 'manual_request'
+                    ? 'Front Office'
+                    : 'Klien';
+
+                $actorName = ($booking->source ?? null) === 'manual_request'
+                    ? 'Front Office'
+                    : $clientName;
+
+                $activity = ($booking->source ?? null) === 'manual_request'
+                    ? 'membuat booking manual untuk klien ' . $clientName . ' ' . $this->bookingScheduleSentence($booking)
+                    : 'melakukan booking ' . $this->bookingScheduleSentence($booking);
+
+                return $this->activityRow(
+                    name: $actorName,
+                    role: $role,
+                    activity: $activity,
+                    occurredAt: $booking->created_at,
+                    type: 'booking'
+                );
+            });
+    }
+
+    private function photographerAssignmentActivities(): Collection
+    {
+        if (!Schema::hasTable('schedule_bookings')) {
+            return collect();
+        }
+
+        return ScheduleBooking::with(['package', 'clientUser', 'photographerUser'])
+            ->whereNotNull('photographer_user_id')
+            ->latest('updated_at')
+            ->limit(120)
+            ->get()
+            ->map(function (ScheduleBooking $booking) {
+                $clientName = $booking->clientUser?->name
+                    ?? $booking->client_name
+                    ?? 'klien';
+
+                $photographerName = $booking->photographerUser?->name
+                    ?? $booking->photographer_name
+                    ?? 'fotografer';
+
+                return $this->activityRow(
+                    name: 'Front Office',
+                    role: 'Front Office',
+                    activity: 'meng-assign fotografer ' . $photographerName . ' untuk booking klien ' . $clientName . ' ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $booking->updated_at,
+                    type: 'assignment'
+                );
+            });
+    }
+
+    private function paymentActivities(): Collection
+    {
+        if (!Schema::hasTable('payments')) {
+            return collect();
+        }
+
+        return Payment::with([
+                'scheduleBooking.package',
+                'scheduleBooking.clientUser',
+                'printOrder.client',
+            ])
+            ->whereIn('transaction_status', $this->successfulPaymentStatuses)
+            ->latest('updated_at')
+            ->limit(160)
+            ->get()
+            ->map(function (Payment $payment) {
+                $booking = $payment->scheduleBooking;
+                $client = $booking?->clientUser ?? $payment->printOrder?->client;
+
+                $clientName = $client?->name
+                    ?? $booking?->client_name
+                    ?? 'Klien';
+
+                $amount = (int) ($payment->base_amount ?: $payment->gross_amount);
+
+                if ($payment->print_order_id) {
+                    $activity = 'membayar tagihan cetak foto sebesar Rp ' . number_format($amount, 0, ',', '.');
+                } elseif ($payment->payment_stage === 'dp') {
+                    $activity = 'membayar DP untuk ' . $this->bookingScheduleSentence($booking) . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                } elseif (in_array($payment->payment_stage, ['full', 'pelunasan', 'remaining'], true)) {
+                    $activity = 'membayar pelunasan untuk ' . $this->bookingScheduleSentence($booking) . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                } else {
+                    $activity = 'melakukan pembayaran untuk ' . $this->bookingScheduleSentence($booking) . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                }
+
+                return $this->activityRow(
+                    name: $clientName,
+                    role: 'Klien',
+                    activity: $activity,
+                    occurredAt: $payment->paid_at ?? $payment->settled_at ?? $payment->updated_at ?? $payment->created_at,
+                    type: 'payment'
+                );
+            });
+    }
+
+    private function photoLinkActivities(): Collection
+    {
+        if (!Schema::hasTable('photo_links')) {
+            return collect();
+        }
+
+        return PhotoLink::with(['booking.package', 'booking.clientUser', 'photographer'])
+            ->latest('uploaded_at')
+            ->latest('created_at')
+            ->limit(120)
+            ->get()
+            ->map(function (PhotoLink $photoLink) {
+                $booking = $photoLink->booking;
+
+                $photographerName = $photoLink->photographer?->name
+                    ?? $booking?->photographer_name
+                    ?? 'Fotografer';
+
+                $clientName = $booking?->clientUser?->name
+                    ?? $booking?->client_name
+                    ?? 'klien';
+
+                return $this->activityRow(
+                    name: $photographerName,
+                    role: 'Fotografer',
+                    activity: 'mengirim link hasil foto untuk klien ' . $clientName . ' ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $photoLink->uploaded_at ?? $photoLink->created_at,
+                    type: 'photo_link'
+                );
+            });
+    }
+
+    private function editRequestActivities(): Collection
+    {
+        if (!Schema::hasTable('edit_requests')) {
+            return collect();
+        }
+
+        $editRequests = EditRequest::with([
+                'booking.package',
+                'booking.clientUser',
+                'client',
+                'editor',
+            ])
+            ->latest('updated_at')
+            ->limit(160)
+            ->get();
+
+        $activities = collect();
+
+        foreach ($editRequests as $editRequest) {
+            $booking = $editRequest->booking;
+
+            $clientName = $editRequest->client?->name
+                ?? $booking?->clientUser?->name
+                ?? $booking?->client_name
+                ?? 'Klien';
+
+            $files = is_array($editRequest->selected_files)
+                ? $editRequest->selected_files
+                : [];
+
+            $fileCount = count($files);
+
+            if ($editRequest->created_at) {
+                $activities->push($this->activityRow(
+                    name: $clientName,
+                    role: 'Klien',
+                    activity: 'mengupload list foto edit untuk ' . $this->bookingScheduleSentence($booking) . ($fileCount > 0 ? ' sebanyak ' . $fileCount . ' file' : ''),
+                    occurredAt: $editRequest->created_at,
+                    type: 'edit_request'
+                ));
             }
 
-            if (in_array($paymentStatus, ['unpaid', 'pending', ''], true)) {
-                return [
-                    'label' => 'Belum Bayar DP',
-                    'badge' => 'warning',
-                ];
+            if ($editRequest->assigned_at && $editRequest->editor) {
+                $activities->push($this->activityRow(
+                    name: 'Front Office',
+                    role: 'Front Office',
+                    activity: 'meng-assign editor ' . $editRequest->editor->name . ' untuk permintaan edit klien ' . $clientName . ' ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $editRequest->assigned_at,
+                    type: 'assignment'
+                ));
             }
 
-            if (in_array($paymentStatus, ['dp_paid', 'partially_paid'], true)) {
-                return [
-                    'label' => 'Booking Aktif (DP)',
-                    'badge' => 'info',
-                ];
-            }
+            if ($editRequest->completed_at) {
+                $editorName = $editRequest->editor?->name ?? 'Editor';
 
-            if (in_array($paymentStatus, ['paid', 'fully_paid'], true)) {
-                return [
-                    'label' => 'Booking Aktif (Lunas)',
-                    'badge' => 'success',
-                ];
+                $activities->push($this->activityRow(
+                    name: $editorName,
+                    role: 'Editor',
+                    activity: 'menyelesaikan edit foto untuk klien ' . $clientName . ' ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $editRequest->completed_at,
+                    type: 'edit_completed'
+                ));
             }
         }
 
-        $latestPayment = $booking->latestPayment;
+        return $activities;
+    }
 
-        if ($latestPayment && in_array($latestPayment->transaction_status, $this->successfulPaymentStatuses, true)) {
-            if ($latestPayment->payment_stage === 'dp') {
-                return [
-                    'label' => 'Booking Aktif (DP)',
-                    'badge' => 'info',
-                ];
+    private function printOrderActivities(): Collection
+    {
+        if (!Schema::hasTable('print_orders')) {
+            return collect();
+        }
+
+        $printOrders = PrintOrder::with([
+                'booking.package',
+                'booking.clientUser',
+                'client',
+            ])
+            ->latest('updated_at')
+            ->limit(120)
+            ->get();
+
+        $activities = collect();
+
+        foreach ($printOrders as $printOrder) {
+            $booking = $printOrder->booking;
+
+            $clientName = $printOrder->client?->name
+                ?? $booking?->clientUser?->name
+                ?? $booking?->client_name
+                ?? 'Klien';
+
+            if ($printOrder->created_at) {
+                $activities->push($this->activityRow(
+                    name: $clientName,
+                    role: 'Klien',
+                    activity: 'mengajukan pesanan cetak foto untuk ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $printOrder->created_at,
+                    type: 'print_order'
+                ));
             }
 
-            if ($latestPayment->payment_stage === 'full') {
-                return [
-                    'label' => 'Booking Aktif (Lunas)',
-                    'badge' => 'success',
-                ];
+            if ($printOrder->processed_at) {
+                $activities->push($this->activityRow(
+                    name: 'Front Office',
+                    role: 'Front Office',
+                    activity: 'memproses pesanan cetak foto milik klien ' . $clientName . ' untuk ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $printOrder->processed_at,
+                    type: 'print_process'
+                ));
             }
 
-            return [
-                'label' => 'Pembayaran Berhasil',
-                'badge' => 'success',
-            ];
+            if ($printOrder->completed_at) {
+                $activities->push($this->activityRow(
+                    name: 'Front Office',
+                    role: 'Front Office',
+                    activity: 'menyelesaikan pesanan cetak foto milik klien ' . $clientName . ' untuk ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $printOrder->completed_at,
+                    type: 'print_completed'
+                ));
+            }
         }
 
-        $currentTracking = $booking->trackings->firstWhere('status', 'current');
+        return $activities;
+    }
 
-        if ($currentTracking) {
-            return match ($currentTracking->stage_key) {
-                'dp_payment' => ['label' => 'Menunggu DP', 'badge' => 'warning'],
-                'photographer_assignment' => ['label' => 'Menunggu Assign Fotografer', 'badge' => 'info'],
-                'full_payment' => ['label' => 'Menunggu Pelunasan', 'badge' => 'warning'],
-                'shooting' => ['label' => 'Jadwal Pemotretan', 'badge' => 'info'],
-                'photo_upload' => ['label' => 'Upload Foto', 'badge' => 'primary'],
-                'edit_upload' => ['label' => 'Edit Proses', 'badge' => 'primary'],
-                'print' => ['label' => 'Proses Cetak', 'badge' => 'info'],
-                'review' => ['label' => 'Menunggu Review', 'badge' => 'success'],
-                default => ['label' => $currentTracking->stage_name, 'badge' => 'secondary'],
-            };
+    private function reviewActivities(): Collection
+    {
+        if (!Schema::hasTable('reviews')) {
+            return collect();
         }
 
-        if ($booking->status === 'completed') {
-            return [
-                'label' => 'Selesai',
-                'badge' => 'success',
-            ];
-        }
+        return Review::with([
+                'booking.package',
+                'booking.clientUser',
+                'client',
+            ])
+            ->latest('created_at')
+            ->limit(120)
+            ->get()
+            ->map(function (Review $review) {
+                $booking = $review->booking;
 
-        if ($booking->status === 'cancelled') {
-            return [
-                'label' => 'Dibatalkan',
-                'badge' => 'danger',
-            ];
-        }
+                $clientName = $review->client?->name
+                    ?? $booking?->clientUser?->name
+                    ?? $booking?->client_name
+                    ?? 'Klien';
 
+                return $this->activityRow(
+                    name: $clientName,
+                    role: 'Klien',
+                    activity: 'memberikan review rating ' . (int) $review->rating . '/5 untuk ' . $this->bookingScheduleSentence($booking),
+                    occurredAt: $review->created_at,
+                    type: 'review'
+                );
+            });
+    }
+
+    private function activityRow(
+        string $name,
+        string $role,
+        string $activity,
+        mixed $occurredAt,
+        string $type = 'default'
+    ): array {
         return [
-            'label' => ucfirst($booking->status ?? 'Booking'),
-            'badge' => 'secondary',
+            'name' => $name ?: '-',
+            'role' => $role ?: '-',
+            'activity' => $activity ?: '-',
+            'occurred_at' => $occurredAt ? Carbon::parse($occurredAt) : null,
+            'type' => $type,
         ];
+    }
+
+    private function bookingScheduleSentence(?ScheduleBooking $booking): string
+    {
+        if (!$booking) {
+            return 'pada data booking yang tidak ditemukan';
+        }
+
+        $packageName = $booking->package?->name ?? 'paket foto';
+
+        $date = $booking->booking_date
+            ? Carbon::parse($booking->booking_date)->translatedFormat('d F Y')
+            : '-';
+
+        $start = $booking->start_time
+            ? Carbon::parse($booking->start_time)->format('H:i')
+            : null;
+
+        $end = $booking->end_time
+            ? Carbon::parse($booking->end_time)->format('H:i')
+            : null;
+
+        if ($start && $end) {
+            $time = $start . ' - ' . $end;
+        } elseif ($start) {
+            $time = $start;
+        } else {
+            $time = '-';
+        }
+
+        return 'untuk paket ' . $packageName . ' pada tanggal ' . $date . ' jam ' . $time;
     }
 
     private function hasBookingPaymentColumns(): bool

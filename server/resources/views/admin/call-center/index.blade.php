@@ -3,398 +3,1379 @@
 @section('title', 'Call Center Kontak')
 
 @section('content')
+  @php
+    $platformOptions = [
+        'whatsapp' => 'WhatsApp',
+        'instagram' => 'Instagram',
+        'tiktok' => 'TikTok',
+        'email' => 'Email',
+        'phone' => 'Telepon',
+        'website' => 'Website',
+    ];
+
+    $statusBadgeClass = function ($status) {
+        return match ($status) {
+            'active' => 'success',
+            'standby' => 'warning',
+            'inactive' => 'secondary',
+            default => 'secondary',
+        };
+    };
+
+    $priorityBadgeClass = function ($priority) {
+        return match ($priority) {
+            'urgent' => 'danger',
+            'high' => 'warning',
+            'normal' => 'primary',
+            'low' => 'secondary',
+            default => 'secondary',
+        };
+    };
+
+    $platformIcon = function ($platform) {
+        return match ($platform) {
+            'whatsapp' => 'bxl-whatsapp',
+            'instagram' => 'bxl-instagram',
+            'tiktok' => 'bxl-tiktok',
+            'email' => 'bx-envelope',
+            'phone' => 'bx-phone',
+            'website' => 'bx-globe',
+            default => 'bx-link',
+        };
+    };
+
+    $platformColor = function ($platform) {
+        return match ($platform) {
+            'whatsapp' => 'success',
+            'instagram' => 'danger',
+            'tiktok' => 'dark',
+            'email' => 'primary',
+            'phone' => 'info',
+            'website' => 'secondary',
+            default => 'secondary',
+        };
+    };
+
+    $hasActiveFilter = request('q') || request('division') || request('platform');
+  @endphp
+
   <div class="container-xxl flex-grow-1 container-p-y">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-      <div>
-        <h4 class="fw-bold mb-1">Call Center Kontak</h4>
-        <p class="text-muted mb-0">
-          Kelola daftar kontak yang bisa dihubungi klien untuk pertanyaan paket, request custom, pembayaran, dan bantuan lain.
-        </p>
+    <div class="dashboard-shell call-center-page">
+
+      {{-- ALERT --}}
+      @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+          <i class="bx bx-check-circle me-1"></i>
+          {{ session('success') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+
+      @if (session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+          <i class="bx bx-error-circle me-1"></i>
+          {{ session('error') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+
+      @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+          <strong>Data belum valid.</strong>
+          <ul class="mb-0 mt-2 ps-3">
+            @foreach ($errors->all() as $error)
+              <li>{{ $error }}</li>
+            @endforeach
+          </ul>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+
+      {{-- HERO HEADER --}}
+      <div class="call-hero-card mb-4">
+        <div class="call-hero-left">
+          <div class="call-hero-icon">
+            <i class="bx bx-headphone"></i>
+          </div>
+
+          <div>
+            <div class="call-hero-kicker">PUSAT BANTUAN KLIEN</div>
+            <h4>Call Center Kontak</h4>
+            <p>
+              Kelola daftar kontak bantuan yang bisa dihubungi klien untuk pertanyaan paket,
+              request custom, pembayaran, kendala aplikasi, dan kebutuhan operasional studio.
+            </p>
+          </div>
+        </div>
+
+        <div class="call-hero-actions">
+          <button type="button" class="btn call-hero-btn" data-bs-toggle="modal" data-bs-target="#createContactModal">
+            <i class="bx bx-plus me-1"></i>
+            Tambah Kontak
+          </button>
+        </div>
       </div>
 
-      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createContactModal">
-        <i class="bx bx-plus me-1"></i> Tambah Kontak
-      </button>
-    </div>
+      {{-- STAT CARDS --}}
+      <div class="row g-4 mb-4">
+        <div class="col-xl-4 col-md-6">
+          <div class="call-stat-card">
+            <div>
+              <span>Total Kontak</span>
+              <h3>{{ $summary['total'] ?? 0 }}</h3>
+              <p>Kontak bantuan terdaftar</p>
+            </div>
 
-    @if (session('success'))
-      <div class="alert alert-success alert-dismissible" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    @endif
+            <div class="call-stat-icon bg-label-primary">
+              <i class="bx bx-phone-call"></i>
+            </div>
+          </div>
+        </div>
 
-    @if ($errors->any())
-      <div class="alert alert-danger alert-dismissible" role="alert">
-        <strong>Data belum valid.</strong>
-        <ul class="mb-0 mt-2">
-          @foreach ($errors->all() as $error)
-            <li>{{ $error }}</li>
-          @endforeach
-        </ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    @endif
+        <div class="col-xl-4 col-md-6">
+          <div class="call-stat-card">
+            <div>
+              <span>Kontak Aktif</span>
+              <h3>{{ $summary['active'] ?? 0 }}</h3>
+              <p>Siap dihubungi klien</p>
+            </div>
 
-    <div class="row">
-      <div class="col-md-4 mb-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <span class="text-muted d-block mb-1">Total Kontak</span>
-                <h3 class="card-title mb-2">{{ $summary['total'] ?? 0 }}</h3>
-                <small class="text-primary fw-semibold">Kontak bantuan terdaftar</small>
-              </div>
-              <div class="avatar">
-                <span class="avatar-initial rounded bg-label-primary">
-                  <i class="bx bx-phone-call"></i>
-                </span>
-              </div>
+            <div class="call-stat-icon bg-label-success">
+              <i class="bx bx-check-circle"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+          <div class="call-stat-card">
+            <div>
+              <span>Kontak Darurat</span>
+              <h3>{{ $summary['emergency'] ?? 0 }}</h3>
+              <p>Prioritas bantuan cepat</p>
+            </div>
+
+            <div class="call-stat-icon bg-label-danger">
+              <i class="bx bx-error-circle"></i>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="col-md-4 mb-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <span class="text-muted d-block mb-1">Kontak Aktif</span>
-                <h3 class="card-title mb-2">{{ $summary['active'] ?? 0 }}</h3>
-                <small class="text-success fw-semibold">Siap dihubungi klien</small>
-              </div>
-              <div class="avatar">
-                <span class="avatar-initial rounded bg-label-success">
-                  <i class="bx bx-check-circle"></i>
-                </span>
-              </div>
-            </div>
-          </div>
+      {{-- INFO --}}
+      <div class="call-info-card mb-4">
+        <div class="call-info-icon">
+          <i class="bx bx-info-circle"></i>
+        </div>
+
+        <div>
+          <h6>Pengaturan Call Center</h6>
+          <p>
+            Kontak yang aktif dan ditandai tampil ke klien dapat digunakan sebagai jalur bantuan di aplikasi.
+            Admin dapat mengatur divisi, platform, jam layanan, prioritas, status, dan kontak darurat.
+          </p>
         </div>
       </div>
 
-      <div class="col-md-4 mb-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <span class="text-muted d-block mb-1">Kontak Darurat</span>
-                <h3 class="card-title mb-2">{{ $summary['emergency'] ?? 0 }}</h3>
-                <small class="text-danger fw-semibold">Prioritas jika butuh bantuan cepat</small>
-              </div>
-              <div class="avatar">
-                <span class="avatar-initial rounded bg-label-danger">
-                  <i class="bx bx-error-circle"></i>
-                </span>
-              </div>
-            </div>
+      {{-- MAIN CONTACT CARD --}}
+      <div class="call-main-card mb-4">
+        <div class="call-main-header">
+          <div>
+            <h5>Daftar Kontak Call Center</h5>
+            <p>Kelola kontak bantuan berdasarkan divisi, platform, status, dan prioritas.</p>
+          </div>
+
+          <div class="call-count-pill">
+            <i class="bx bx-headphone"></i>
+            {{ $contacts->count() }} kontak
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="row">
-      <div class="col-lg-8 mb-4">
-        <div class="card h-100">
-          <div class="card-header">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        {{-- FILTER --}}
+        <div class="call-filter-area">
+          <form method="GET" action="{{ route('admin.call-center.index') }}" class="call-filter-box">
+            <div class="call-filter-head">
               <div>
-                <h5 class="mb-0">Daftar Kontak</h5>
-                <small class="text-muted">Kontak ini dapat ditampilkan juga di aplikasi Flutter klien.</small>
+                <h6>Filter Kontak</h6>
+                <p>Cari kontak berdasarkan nama, divisi, platform, atau nomor kontak.</p>
               </div>
 
-              <form method="GET" action="{{ route('admin.call-center.index') }}" class="d-flex flex-wrap gap-2">
-                <input
-                  type="text"
-                  name="q"
-                  class="form-control"
-                  value="{{ request('q') }}"
-                  placeholder="Cari nama, divisi, kontak..."
-                  style="width: 230px;"
-                >
+              @if ($hasActiveFilter)
+                <span class="call-filter-active">
+                  <i class="bx bx-filter-alt"></i>
+                  Filter aktif
+                </span>
+              @endif
+            </div>
 
-                <select name="division" class="form-select" style="width: 170px;">
+            <div class="call-filter-grid">
+              <div class="call-filter-field call-search-field">
+                <label class="form-label">Pencarian Kontak</label>
+                <div class="call-input-with-icon">
+                  <span>
+                    <i class="bx bx-search"></i>
+                  </span>
+
+                  <input
+                    type="text"
+                    name="q"
+                    class="form-control"
+                    value="{{ request('q') }}"
+                    placeholder="Cari nama, divisi, kontak..."
+                  >
+                </div>
+              </div>
+
+              <div class="call-filter-field">
+                <label class="form-label">Divisi</label>
+                <select name="division" class="form-select">
                   <option value="">Semua Divisi</option>
+
                   @foreach ($divisions as $division)
                     <option value="{{ $division }}" @selected(request('division') === $division)>
                       {{ $division }}
                     </option>
                   @endforeach
                 </select>
+              </div>
 
-                <select name="platform" class="form-select" style="width: 150px;">
+              <div class="call-filter-field">
+                <label class="form-label">Platform</label>
+                <select name="platform" class="form-select">
                   <option value="">Semua Platform</option>
-                  <option value="whatsapp" @selected(request('platform') === 'whatsapp')>WhatsApp</option>
-                  <option value="instagram" @selected(request('platform') === 'instagram')>Instagram</option>
-                  <option value="tiktok" @selected(request('platform') === 'tiktok')>TikTok</option>
-                  <option value="email" @selected(request('platform') === 'email')>Email</option>
-                  <option value="phone" @selected(request('platform') === 'phone')>Telepon</option>
-                  <option value="website" @selected(request('platform') === 'website')>Website</option>
-                </select>
 
+                  @foreach ($platformOptions as $value => $label)
+                    <option value="{{ $value }}" @selected(request('platform') === $value)>
+                      {{ $label }}
+                    </option>
+                  @endforeach
+                </select>
+              </div>
+
+              <div class="call-filter-buttons">
                 <button type="submit" class="btn btn-primary">
-                  <i class="bx bx-search"></i>
+                  <i class="bx bx-filter-alt me-1"></i>
+                  Filter
                 </button>
 
                 <a href="{{ route('admin.call-center.index') }}" class="btn btn-outline-secondary">
                   Reset
                 </a>
-              </form>
+              </div>
             </div>
-          </div>
-
-          <div class="card-body">
-            @if ($contacts->isEmpty())
-              <div class="text-center py-5">
-                <i class="bx bx-phone-off display-5 text-muted"></i>
-                <h5 class="mt-3 mb-1">Belum ada kontak</h5>
-                <p class="text-muted mb-3">Tambahkan kontak WhatsApp, Instagram, TikTok, Email, atau Website.</p>
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createContactModal">
-                  <i class="bx bx-plus me-1"></i> Tambah Kontak
-                </button>
-              </div>
-            @else
-              <div class="row g-3">
-                @foreach ($contacts as $contact)
-                  @php
-                    $statusClass = match ($contact->status) {
-                        'active' => 'success',
-                        'standby' => 'secondary',
-                        'inactive' => 'dark',
-                        default => 'secondary',
-                    };
-
-                    $priorityClass = match ($contact->priority) {
-                        'urgent' => 'danger',
-                        'high' => 'warning',
-                        'normal' => 'primary',
-                        'low' => 'secondary',
-                        default => 'secondary',
-                    };
-
-                    $platformIcon = match ($contact->platform) {
-                        'whatsapp' => 'bxl-whatsapp',
-                        'instagram' => 'bxl-instagram',
-                        'tiktok' => 'bxl-tiktok',
-                        'email' => 'bx-envelope',
-                        'phone' => 'bx-phone',
-                        'website' => 'bx-globe',
-                        default => 'bx-link',
-                    };
-                  @endphp
-
-                  <div class="col-md-6">
-                    <div class="border rounded p-3 h-100">
-                      <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                          <h6 class="mb-1">{{ $contact->title }}</h6>
-                          <small class="text-muted">{{ $contact->description ?: '-' }}</small>
-                        </div>
-                        <div class="d-flex flex-column align-items-end gap-1">
-                          <span class="badge bg-label-{{ $statusClass }}">{{ $contact->status_label }}</span>
-                          @if ($contact->is_emergency)
-                            <span class="badge bg-label-danger">Darurat</span>
-                          @endif
-                        </div>
-                      </div>
-
-                      <ul class="list-unstyled mb-3">
-                        <li class="mb-2">
-                          <strong>Divisi:</strong> {{ $contact->division ?: '-' }}
-                        </li>
-                        <li class="mb-2">
-                          <strong>Nama:</strong> {{ $contact->contact_person ?: '-' }}
-                        </li>
-                        <li class="mb-2">
-                          <strong>Platform:</strong>
-                          <i class="bx {{ $platformIcon }}"></i> {{ $contact->platform_label }}
-                        </li>
-                        <li class="mb-2">
-                          <strong>Kontak:</strong> {{ $contact->contact_value }}
-                        </li>
-                        <li class="mb-2">
-                          <strong>Jam Layanan:</strong> {{ $contact->service_hours ?: '-' }}
-                        </li>
-                        <li class="mb-2">
-                          <strong>Prioritas:</strong>
-                          <span class="badge bg-label-{{ $priorityClass }}">{{ $contact->priority_label }}</span>
-                        </li>
-                        <li class="mb-0">
-                          <strong>Tampil di Klien:</strong>
-                          @if ($contact->is_visible_to_client)
-                            <span class="badge bg-label-success">Ya</span>
-                          @else
-                            <span class="badge bg-label-secondary">Tidak</span>
-                          @endif
-                        </li>
-                      </ul>
-
-                      <div class="d-flex flex-wrap gap-2">
-                        @if ($contact->contact_url)
-                          <a href="{{ $contact->contact_url }}" target="_blank" class="btn btn-success btn-sm">
-                            <i class="bx {{ $platformIcon }} me-1"></i> Buka
-                          </a>
-                        @endif
-
-                        <button
-                          type="button"
-                          class="btn btn-outline-warning btn-sm btn-edit-contact"
-                          data-bs-toggle="modal"
-                          data-bs-target="#editContactModal"
-                          data-id="{{ $contact->id }}"
-                          data-title="{{ $contact->title }}"
-                          data-division="{{ $contact->division }}"
-                          data-description="{{ $contact->description }}"
-                          data-contact-person="{{ $contact->contact_person }}"
-                          data-platform="{{ $contact->platform }}"
-                          data-contact-value="{{ $contact->contact_value }}"
-                          data-whatsapp-number="{{ $contact->whatsapp_number }}"
-                          data-url="{{ $contact->url }}"
-                          data-service-hours="{{ $contact->service_hours }}"
-                          data-priority="{{ $contact->priority }}"
-                          data-status="{{ $contact->status }}"
-                          data-is-emergency="{{ $contact->is_emergency ? 1 : 0 }}"
-                          data-is-visible-to-client="{{ $contact->is_visible_to_client ? 1 : 0 }}"
-                          data-sort-order="{{ $contact->sort_order }}"
-                        >
-                          Edit
-                        </button>
-
-                        <form action="{{ route('admin.call-center.toggle-status', $contact) }}" method="POST">
-                          @csrf
-                          @method('PATCH')
-                          <button type="submit" class="btn btn-outline-secondary btn-sm">
-                            {{ $contact->status === 'active' ? 'Nonaktifkan' : 'Aktifkan' }}
-                          </button>
-                        </form>
-
-                        <form action="{{ route('admin.call-center.destroy', $contact) }}" method="POST" class="form-delete-contact">
-                          @csrf
-                          @method('DELETE')
-                          <button type="submit" class="btn btn-outline-danger btn-sm">
-                            Hapus
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                @endforeach
-              </div>
-            @endif
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-4 mb-4">
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="mb-0">Alur Bantuan Klien</h5>
-            <small class="text-muted">Panduan kontak yang ditampilkan ke aplikasi klien</small>
-          </div>
-          <div class="card-body">
-            <ol class="mb-0 ps-3">
-              <li class="mb-3">
-                <strong>Pertanyaan paket</strong><br>
-                <small class="text-muted">Klien dapat menghubungi Front Office atau Admin untuk detail paket foto.</small>
-              </li>
-              <li class="mb-3">
-                <strong>Request foto custom</strong><br>
-                <small class="text-muted">Klien bisa bertanya jika konsep foto tidak tersedia di paket.</small>
-              </li>
-              <li class="mb-3">
-                <strong>Kendala pembayaran</strong><br>
-                <small class="text-muted">Klien diarahkan ke kontak Payment Support.</small>
-              </li>
-              <li class="mb-0">
-                <strong>Kendala aplikasi</strong><br>
-                <small class="text-muted">Klien diarahkan ke kontak Admin Sistem atau IT Support.</small>
-              </li>
-            </ol>
-          </div>
+          </form>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Template Pesan WhatsApp</h5>
-            <small class="text-muted">Pesan cepat untuk klien</small>
-          </div>
-          <div class="card-body">
-            <div class="border rounded p-3 bg-light">
-              <small class="text-muted d-block mb-2">Contoh pesan:</small>
-              <p class="mb-0 small" id="waTemplateText">
-                Halo Monoframe Studio, saya ingin bertanya tentang layanan Monoframe.<br><br>
-                Nama: [isi nama]<br>
-                Pertanyaan: [isi pertanyaan]<br>
-                Paket/Request: [isi paket atau request custom]<br><br>
-                Terima kasih.
-              </p>
-            </div>
+        {{-- CONTACT LIST --}}
+        <div class="call-contact-area">
+          @if ($contacts->isEmpty())
+            <div class="call-empty-state">
+              <div class="call-empty-icon">
+                <i class="bx bx-phone-off"></i>
+              </div>
 
-            <div class="d-grid mt-3">
-              <button type="button" class="btn btn-outline-primary" id="copyTemplateButton">
-                <i class="bx bx-copy me-1"></i> Copy Template
+              <h6>Belum ada kontak</h6>
+              <p>Tambahkan kontak WhatsApp, Instagram, TikTok, Email, Telepon, atau Website.</p>
+
+              <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createContactModal">
+                <i class="bx bx-plus me-1"></i>
+                Tambah Kontak
               </button>
             </div>
-          </div>
+          @else
+            <div class="call-contact-grid">
+              @foreach ($contacts as $contact)
+                @php
+                  $statusClass = $statusBadgeClass($contact->status);
+                  $priorityClass = $priorityBadgeClass($contact->priority);
+                  $icon = $platformIcon($contact->platform);
+                  $color = $platformColor($contact->platform);
+                @endphp
+
+                <div class="call-contact-card">
+                  <div class="call-contact-top">
+                    <div class="call-platform-avatar bg-label-{{ $color }}">
+                      <i class="bx {{ $icon }}"></i>
+                    </div>
+
+                    <div class="call-contact-badges">
+                      <span class="badge bg-label-{{ $statusClass }}">
+                        {{ $contact->status_label }}
+                      </span>
+
+                      @if ($contact->is_emergency)
+                        <span class="badge bg-label-danger">
+                          Darurat
+                        </span>
+                      @endif
+                    </div>
+                  </div>
+
+                  <div class="call-contact-title">
+                    <h6>{{ $contact->title }}</h6>
+                    <p>{{ $contact->description ?: 'Tidak ada deskripsi.' }}</p>
+                  </div>
+
+                  <div class="call-contact-main">
+                    <div>
+                      <span>
+                        <i class="bx {{ $icon }}"></i>
+                        {{ $contact->platform_label }}
+                      </span>
+
+                      <strong>{{ $contact->contact_value }}</strong>
+                    </div>
+
+                    @if ($contact->contact_url)
+                      <a href="{{ $contact->contact_url }}" target="_blank" class="btn btn-primary btn-sm">
+                        <i class="bx bx-link-external me-1"></i>
+                        Buka
+                      </a>
+                    @endif
+                  </div>
+
+                  <div class="call-contact-info">
+                    <div>
+                      <span>Divisi</span>
+                      <strong>{{ $contact->division ?: '-' }}</strong>
+                    </div>
+
+                    <div>
+                      <span>PIC</span>
+                      <strong>{{ $contact->contact_person ?: '-' }}</strong>
+                    </div>
+
+                    <div>
+                      <span>Jam Layanan</span>
+                      <strong>{{ $contact->service_hours ?: '-' }}</strong>
+                    </div>
+
+                    <div>
+                      <span>Prioritas</span>
+                      <strong>
+                        <span class="badge bg-label-{{ $priorityClass }}">
+                          {{ $contact->priority_label }}
+                        </span>
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div class="call-visible-box">
+                    <div>
+                      <span>Tampil di aplikasi klien</span>
+                      <p>{{ $contact->is_visible_to_client ? 'Ditampilkan untuk klien.' : 'Disembunyikan dari klien.' }}</p>
+                    </div>
+
+                    @if ($contact->is_visible_to_client)
+                      <span class="badge bg-label-success">Ya</span>
+                    @else
+                      <span class="badge bg-label-secondary">Tidak</span>
+                    @endif
+                  </div>
+
+                  <div class="call-contact-actions">
+                    <button
+                      type="button"
+                      class="btn btn-outline-warning btn-sm btn-edit-contact"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editContactModal"
+                      data-id="{{ $contact->id }}"
+                      data-title="{{ $contact->title }}"
+                      data-division="{{ $contact->division }}"
+                      data-description="{{ $contact->description }}"
+                      data-contact-person="{{ $contact->contact_person }}"
+                      data-platform="{{ $contact->platform }}"
+                      data-contact-value="{{ $contact->contact_value }}"
+                      data-whatsapp-number="{{ $contact->whatsapp_number }}"
+                      data-url="{{ $contact->url }}"
+                      data-service-hours="{{ $contact->service_hours }}"
+                      data-priority="{{ $contact->priority }}"
+                      data-status="{{ $contact->status }}"
+                      data-is-emergency="{{ $contact->is_emergency ? 1 : 0 }}"
+                      data-is-visible-to-client="{{ $contact->is_visible_to_client ? 1 : 0 }}"
+                      data-sort-order="{{ $contact->sort_order }}"
+                    >
+                      <i class="bx bx-edit-alt me-1"></i>
+                      Edit
+                    </button>
+
+                    <form action="{{ route('admin.call-center.toggle-status', $contact) }}" method="POST">
+                      @csrf
+                      @method('PATCH')
+
+                      <button type="submit" class="btn btn-outline-secondary btn-sm">
+                        @if ($contact->status === 'active')
+                          <i class="bx bx-hide me-1"></i>
+                          Nonaktif
+                        @else
+                          <i class="bx bx-check-circle me-1"></i>
+                          Aktif
+                        @endif
+                      </button>
+                    </form>
+
+                    <form action="{{ route('admin.call-center.destroy', $contact) }}" method="POST" class="form-delete-contact">
+                      @csrf
+                      @method('DELETE')
+
+                      <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="bx bx-trash me-1"></i>
+                        Hapus
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              @endforeach
+            </div>
+          @endif
         </div>
       </div>
     </div>
   </div>
 
   {{-- CREATE MODAL --}}
-  <div class="modal fade" id="createContactModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <form method="POST" action="{{ route('admin.call-center.store') }}" class="modal-content">
+  <div class="modal fade call-contact-modal" id="createContactModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered call-modal-dialog">
+      <form method="POST" action="{{ route('admin.call-center.store') }}" class="modal-content call-modal-content">
         @csrf
 
-        <div class="modal-header">
-          <h5 class="modal-title">Tambah Kontak</h5>
+        <div class="modal-header call-modal-header">
+          <div>
+            <h5 class="modal-title">Tambah Kontak</h5>
+            <small>Tambahkan kontak bantuan baru untuk klien Monoframe Studio.</small>
+          </div>
+
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body call-modal-body">
           @include('admin.call-center.partials.form', [
               'prefix' => 'create',
               'contact' => null,
           ])
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-success">Simpan Kontak</button>
+        <div class="modal-footer call-modal-footer">
+          <button type="button" class="btn btn-outline-secondary call-modal-cancel-btn" data-bs-dismiss="modal">
+            Batal
+          </button>
+
+          <button type="submit" class="btn btn-primary call-modal-submit-btn">
+            <i class="bx bx-save me-1"></i>
+            Simpan Kontak
+          </button>
         </div>
       </form>
     </div>
   </div>
 
   {{-- EDIT MODAL --}}
-  <div class="modal fade" id="editContactModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <form method="POST" action="#" class="modal-content" id="editContactForm">
+  <div class="modal fade call-contact-modal" id="editContactModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered call-modal-dialog">
+      <form method="POST" action="#" class="modal-content call-modal-content" id="editContactForm">
         @csrf
         @method('PUT')
 
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Kontak</h5>
+        <div class="modal-header call-modal-header">
+          <div>
+            <h5 class="modal-title">Edit Kontak</h5>
+            <small>Ubah detail kontak bantuan yang sudah terdaftar.</small>
+          </div>
+
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body call-modal-body">
           @include('admin.call-center.partials.form', [
               'prefix' => 'edit',
               'contact' => null,
           ])
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-warning">Update Kontak</button>
+        <div class="modal-footer call-modal-footer">
+          <button type="button" class="btn btn-outline-secondary call-modal-cancel-btn" data-bs-dismiss="modal">
+            Batal
+          </button>
+
+          <button type="submit" class="btn btn-warning call-modal-submit-btn">
+            <i class="bx bx-save me-1"></i>
+            Update Kontak
+          </button>
         </div>
       </form>
     </div>
   </div>
+
+  <style>
+    .call-center-page {
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    .call-hero-card {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      padding: 32px 34px;
+      border-radius: 32px;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.36), transparent 32%),
+        linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+      box-shadow: 0 24px 54px rgba(52, 79, 165, 0.24);
+      color: #ffffff;
+    }
+
+    .call-hero-card::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -90px;
+      bottom: -130px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .call-hero-left {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      min-width: 0;
+      max-width: 940px;
+    }
+
+    .call-hero-icon {
+      width: 76px;
+      height: 76px;
+      border-radius: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-size: 38px;
+      box-shadow: 0 16px 32px rgba(22, 43, 77, 0.16);
+    }
+
+    .call-hero-kicker {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .call-hero-card h4 {
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .call-hero-card p {
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.75;
+      margin-bottom: 0;
+    }
+
+    .call-hero-actions {
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+    }
+
+    .call-hero-btn {
+      min-height: 54px;
+      border: 0;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--mf-primary);
+      font-weight: 900;
+      padding: 0 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      box-shadow: 0 16px 30px rgba(22, 43, 77, 0.16);
+      transition: 0.2s ease;
+    }
+
+    .call-hero-btn:hover {
+      background: #ffffff;
+      color: var(--mf-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 36px rgba(22, 43, 77, 0.18);
+    }
+
+    .call-stat-card {
+      min-height: 142px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      padding: 24px;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.16), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+      box-shadow: var(--mf-shadow-soft);
+      transition: 0.22s ease;
+    }
+
+    .call-stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 48px rgba(52, 79, 165, 0.14);
+    }
+
+    .call-stat-card span {
+      display: block;
+      color: var(--mf-muted);
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .call-stat-card h3 {
+      color: var(--mf-ink);
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .call-stat-card p {
+      color: var(--mf-muted);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 0;
+    }
+
+    .call-stat-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 28px;
+    }
+
+    .call-info-card {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 22px 24px;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.18), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+      box-shadow: var(--mf-shadow-soft);
+    }
+
+    .call-info-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+      color: #ffffff;
+      font-size: 28px;
+      box-shadow: 0 16px 32px rgba(88, 115, 220, 0.22);
+    }
+
+    .call-info-card h6 {
+      color: var(--mf-ink);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .call-info-card p {
+      color: var(--mf-muted);
+      font-weight: 600;
+      line-height: 1.75;
+      margin-bottom: 0;
+    }
+
+    .call-main-card {
+      border-radius: 32px;
+      background: #ffffff;
+      box-shadow: var(--mf-shadow-soft);
+      overflow: hidden;
+    }
+
+    .call-main-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 30px 34px 22px;
+      border-bottom: 1px solid var(--mf-border);
+    }
+
+    .call-main-header h5 {
+      color: var(--mf-ink);
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .call-main-header p {
+      color: var(--mf-muted);
+      font-weight: 600;
+      line-height: 1.6;
+      margin-bottom: 0;
+    }
+
+    .call-count-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(88, 115, 220, 0.10);
+      color: var(--mf-primary);
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .call-filter-area {
+      padding: 26px 34px 30px;
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.12), transparent 35%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    }
+
+    .call-filter-box {
+      padding: 20px;
+      border: 1px solid var(--mf-border);
+      border-radius: 26px;
+      background: #ffffff;
+      box-shadow: 0 10px 24px rgba(22, 43, 77, 0.04);
+    }
+
+    .call-filter-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(224, 231, 241, 0.85);
+    }
+
+    .call-filter-head h6 {
+      color: var(--mf-ink);
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .call-filter-head p {
+      color: var(--mf-muted);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.55;
+      margin-bottom: 0;
+    }
+
+    .call-filter-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(88, 115, 220, 0.10);
+      color: var(--mf-primary);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .call-filter-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.5fr) minmax(170px, 0.7fr) minmax(170px, 0.7fr) auto;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .call-filter-field {
+      min-width: 0;
+    }
+
+    .call-filter-field .form-label {
+      color: var(--mf-ink);
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .call-filter-field .form-select {
+      width: 100%;
+      height: 52px !important;
+      border-radius: 18px !important;
+      border: 1px solid var(--mf-border) !important;
+      background: #ffffff !important;
+      color: var(--mf-ink) !important;
+      font-size: 14px !important;
+      font-weight: 800 !important;
+      box-shadow: none !important;
+    }
+
+    .call-filter-field .form-select:focus {
+      border-color: rgba(88, 115, 220, 0.48) !important;
+      box-shadow: 0 0 0 0.22rem rgba(88, 115, 220, 0.10) !important;
+    }
+
+    .call-input-with-icon {
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+      height: 52px;
+      border: 1px solid var(--mf-border);
+      border-radius: 18px;
+      background: #ffffff;
+      overflow: hidden;
+      transition: 0.18s ease;
+    }
+
+    .call-input-with-icon:focus-within {
+      border-color: rgba(88, 115, 220, 0.48);
+      box-shadow: 0 0 0 0.22rem rgba(88, 115, 220, 0.10);
+    }
+
+    .call-input-with-icon span {
+      width: 58px;
+      min-width: 58px;
+      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      color: var(--mf-ink);
+      border-right: 1px solid var(--mf-border);
+      font-size: 20px;
+    }
+
+    .call-input-with-icon input {
+      height: 100% !important;
+      flex: 1;
+      min-width: 0;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: #ffffff !important;
+      color: var(--mf-ink) !important;
+      font-size: 14px !important;
+      font-weight: 800 !important;
+      padding: 0 18px !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    .call-input-with-icon input::placeholder {
+      color: rgba(107, 124, 147, 0.62) !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+    }
+
+    .call-filter-buttons {
+      display: flex;
+      align-items: end;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 220px;
+      width: 100%;
+    }
+
+    .call-filter-buttons .btn {
+      height: 52px;
+      border-radius: 18px;
+      font-weight: 900;
+      padding-left: 18px;
+      padding-right: 18px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .call-filter-buttons .btn-primary {
+      min-width: 112px;
+      box-shadow: 0 12px 24px rgba(88, 115, 220, 0.20);
+    }
+
+    .call-filter-buttons .btn-outline-secondary {
+      min-width: 90px;
+      background: #ffffff;
+    }
+
+    .call-contact-area {
+      padding: 0 34px 34px;
+      background:
+        radial-gradient(circle at bottom left, rgba(88, 115, 220, 0.08), transparent 34%),
+        linear-gradient(180deg, #f8fbfd 0%, #ffffff 100%);
+    }
+
+    .call-contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .call-contact-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      padding: 20px;
+      border: 1px solid var(--mf-border);
+      border-radius: 28px;
+      background: #ffffff;
+      box-shadow: 0 14px 34px rgba(22, 43, 77, 0.06);
+      transition: 0.22s ease;
+    }
+
+    .call-contact-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 50px rgba(52, 79, 165, 0.14);
+    }
+
+    .call-contact-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .call-platform-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 19px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .call-contact-badges {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .call-contact-title {
+      margin-bottom: 14px;
+    }
+
+    .call-contact-title h6 {
+      color: var(--mf-ink);
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+
+    .call-contact-title p {
+      color: var(--mf-muted);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.6;
+      margin-bottom: 0;
+    }
+
+    .call-contact-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(224, 231, 241, 0.9);
+      background:
+        radial-gradient(circle at top right, rgba(88, 115, 220, 0.10), transparent 34%),
+        linear-gradient(180deg, #fbfdff 0%, #f4f7fb 100%);
+      margin-bottom: 14px;
+    }
+
+    .call-contact-main span {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--mf-muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    .call-contact-main span i {
+      color: var(--mf-primary);
+      font-size: 16px;
+    }
+
+    .call-contact-main strong {
+      display: block;
+      color: var(--mf-ink);
+      font-size: 15px;
+      font-weight: 900;
+      word-break: break-word;
+    }
+
+    .call-contact-main .btn {
+      border-radius: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .call-contact-info {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .call-contact-info > div {
+      padding: 12px;
+      border: 1px solid var(--mf-border);
+      border-radius: 18px;
+      background: #ffffff;
+    }
+
+    .call-contact-info span {
+      display: block;
+      color: var(--mf-muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    .call-contact-info strong {
+      display: block;
+      color: var(--mf-ink);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .call-visible-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      border-radius: 20px;
+      background: rgba(47, 177, 140, 0.08);
+      margin-bottom: 14px;
+    }
+
+    .call-visible-box span:first-child {
+      color: var(--mf-ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .call-visible-box p {
+      color: var(--mf-muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.5;
+      margin: 2px 0 0;
+    }
+
+    .call-contact-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .call-contact-actions form {
+      display: inline-block;
+      margin-bottom: 0;
+    }
+
+    .call-contact-actions .btn {
+      border-radius: 13px;
+      font-size: 12px;
+      font-weight: 900;
+      padding: 8px 11px;
+      position: relative;
+      z-index: 3;
+    }
+
+    .call-empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      border: 1px dashed var(--mf-border);
+      border-radius: 28px;
+      background: #ffffff;
+      color: var(--mf-muted);
+      font-weight: 700;
+    }
+
+    .call-empty-icon {
+      width: 74px;
+      height: 74px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      border-radius: 26px;
+      background: rgba(88, 115, 220, 0.10);
+      color: var(--mf-primary);
+      font-size: 40px;
+    }
+
+    .call-empty-state h6 {
+      color: var(--mf-ink);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .call-empty-state p {
+      margin-bottom: 18px;
+    }
+
+    .call-empty-state .btn {
+      border-radius: 16px;
+      font-weight: 900;
+    }
+
+    .call-modal-dialog {
+      max-width: 760px;
+    }
+
+    .call-modal-content {
+      min-height: 86vh;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      border: 0;
+      border-radius: 30px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(22, 43, 77, 0.18);
+    }
+
+    .call-modal-header {
+      flex-shrink: 0;
+      padding: 24px 28px;
+      background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+      color: #ffffff;
+      border-bottom: 0;
+    }
+
+    .call-modal-header .modal-title {
+      color: #ffffff;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .call-modal-header small {
+      color: rgba(255, 255, 255, 0.78);
+      font-weight: 600;
+    }
+
+    .call-modal-body {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 28px 28px 18px;
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.12), transparent 35%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    }
+
+    .call-modal-footer {
+      flex-shrink: 0;
+      margin-top: auto;
+      padding: 28px 30px 32px;
+      background: #ffffff;
+      border-top: 1px solid var(--mf-border);
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .call-modal-footer .btn {
+      height: 48px;
+      border-radius: 16px;
+      font-weight: 900;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+
+    .call-modal-cancel-btn {
+      min-width: 104px;
+      background: #ffffff;
+    }
+
+    .call-modal-submit-btn {
+      min-width: 220px;
+      box-shadow: 0 12px 24px rgba(88, 115, 220, 0.20);
+    }
+
+    @media (max-width: 1400px) {
+      .call-contact-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .call-filter-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .call-search-field {
+        grid-column: span 3;
+      }
+
+      .call-filter-buttons {
+        grid-column: span 3;
+        justify-content: flex-end;
+      }
+    }
+
+    @media (max-width: 992px) {
+      .call-hero-card {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .call-hero-actions,
+      .call-hero-btn {
+        width: 100%;
+      }
+
+      .call-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .call-search-field,
+      .call-filter-buttons {
+        grid-column: span 2;
+      }
+
+      .call-filter-buttons {
+        justify-content: flex-start;
+      }
+
+      .call-contact-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .call-hero-card,
+      .call-main-header,
+      .call-filter-area,
+      .call-contact-area {
+        padding-left: 22px !important;
+        padding-right: 22px !important;
+      }
+
+      .call-hero-card {
+        padding-top: 26px;
+        padding-bottom: 26px;
+      }
+
+      .call-hero-left {
+        flex-direction: column;
+      }
+
+      .call-hero-btn {
+        min-height: 50px;
+      }
+
+      .call-info-card {
+        grid-template-columns: 1fr;
+      }
+
+      .call-filter-box {
+        padding: 16px;
+      }
+
+      .call-filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .call-search-field,
+      .call-filter-buttons {
+        grid-column: span 1;
+      }
+
+      .call-filter-buttons {
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .call-filter-buttons .btn,
+      .call-filter-buttons .btn-outline-secondary {
+        width: 100%;
+      }
+
+      .call-contact-main,
+      .call-visible-box {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .call-contact-main .btn {
+        width: 100%;
+      }
+
+      .call-contact-info {
+        grid-template-columns: 1fr;
+      }
+
+      .call-contact-actions .btn,
+      .call-contact-actions form {
+        width: 100%;
+      }
+
+      .call-modal-dialog {
+        max-width: calc(100% - 24px);
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .call-modal-content {
+        min-height: 88vh;
+        max-height: 94vh;
+      }
+
+      .call-modal-footer {
+        flex-direction: column;
+        padding: 22px;
+      }
+
+      .call-modal-footer .btn,
+      .call-modal-cancel-btn,
+      .call-modal-submit-btn {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  </style>
 @endsection
 
 @push('scripts')
@@ -407,6 +1388,10 @@
 
       editButtons.forEach(function (button) {
         button.addEventListener('click', function () {
+          if (!editForm) {
+            return;
+          }
+
           const id = button.dataset.id;
 
           editForm.action = updateRouteTemplate.replace('__ID__', id);
@@ -441,24 +1426,9 @@
         });
       });
 
-      const copyButton = document.getElementById('copyTemplateButton');
-      const templateText = document.getElementById('waTemplateText');
-
-      if (copyButton && templateText) {
-        copyButton.addEventListener('click', async function () {
-          const text = templateText.innerText;
-
-          try {
-            await navigator.clipboard.writeText(text);
-            alert('Template pesan berhasil disalin.');
-          } catch (error) {
-            alert('Gagal menyalin template.');
-          }
-        });
-      }
-
       function setField(id, value) {
         const field = document.getElementById(id);
+
         if (field) {
           field.value = value || '';
         }
@@ -466,6 +1436,7 @@
 
       function setCheckbox(id, checked) {
         const field = document.getElementById(id);
+
         if (field) {
           field.checked = checked;
         }

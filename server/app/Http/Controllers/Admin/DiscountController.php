@@ -13,34 +13,49 @@ class DiscountController extends Controller
 {
   public function create(Request $request)
   {
-    $categoryId = $request->query('category');
-
-    if (!$categoryId) {
-      return redirect()
-        ->route('admin.packages.index')
-        ->with('error', 'Pilih kategori terlebih dahulu sebelum menambah diskon.');
-    }
-
-    $selectedCategory = Category::findOrFail($categoryId);
-
-    $packages = Package::where('category_id', $selectedCategory->id)
+    $categories = Category::where('is_active', true)
       ->orderBy('name')
       ->get();
 
-    return view('admin.discounts.create', compact('selectedCategory', 'packages'));
+    $packages = Package::with('category')
+      ->where('is_active', true)
+      ->orderBy('name')
+      ->get();
+
+    $selectedCategory = null;
+
+    if ($request->filled('category')) {
+      $selectedCategory = Category::find($request->query('category'));
+    }
+
+    return view('admin.discounts.create', compact(
+      'categories',
+      'packages',
+      'selectedCategory'
+    ));
   }
 
   public function store(Request $request)
   {
     $validated = $request->validate([
-      'category_id' => 'required|exists:categories,id',
-      'promo_name' => 'nullable|string|max:255',
-      'discount_percent' => 'required|integer|min:1|max:100',
-      'discount_start_at' => 'nullable|date',
-      'discount_end_at' => 'nullable|date|after_or_equal:discount_start_at',
-      'is_active' => 'nullable|boolean',
-      'package_ids' => 'required|array|min:1',
-      'package_ids.*' => 'exists:packages,id',
+      'category_id' => ['required', 'exists:categories,id'],
+      'promo_name' => ['nullable', 'string', 'max:255'],
+      'discount_percent' => ['required', 'integer', 'min:1', 'max:100'],
+      'discount_start_at' => ['nullable', 'date'],
+      'discount_end_at' => ['nullable', 'date', 'after_or_equal:discount_start_at'],
+      'is_active' => ['nullable', 'boolean'],
+      'package_ids' => ['required', 'array', 'min:1'],
+      'package_ids.*' => ['exists:packages,id'],
+    ], [
+      'category_id.required' => 'Kategori wajib dipilih.',
+      'category_id.exists' => 'Kategori tidak valid.',
+      'discount_percent.required' => 'Besar diskon wajib diisi.',
+      'discount_percent.min' => 'Diskon minimal 1%.',
+      'discount_percent.max' => 'Diskon maksimal 100%.',
+      'discount_end_at.after_or_equal' => 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.',
+      'package_ids.required' => 'Pilih minimal satu paket untuk diberi diskon.',
+      'package_ids.min' => 'Pilih minimal satu paket untuk diberi diskon.',
+      'package_ids.*.exists' => 'Paket yang dipilih tidak valid.',
     ]);
 
     $packagesCount = Package::where('category_id', $validated['category_id'])
@@ -50,7 +65,7 @@ class DiscountController extends Controller
     if ($packagesCount !== count($validated['package_ids'])) {
       return back()
         ->withInput()
-        ->with('error', 'Semua paket yang dipilih harus berasal dari kategori yang sama.');
+        ->with('error', 'Semua paket yang dipilih harus berasal dari kategori yang dipilih.');
     }
 
     DB::transaction(function () use ($request, $validated) {
@@ -67,24 +82,34 @@ class DiscountController extends Controller
     });
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $validated['category_id']])
+      ->route('admin.packages.index', [
+        'tab' => 'discounts',
+      ])
       ->with('success', 'Diskon berhasil ditambahkan.');
   }
 
   public function edit(Discount $discount)
   {
-    $selectedCategory = $discount->category;
-
-    $packages = Package::where('category_id', $selectedCategory->id)
+    $categories = Category::where('is_active', true)
       ->orderBy('name')
       ->get();
 
-    $selectedPackageIds = $discount->packages()->pluck('packages.id')->toArray();
+    $packages = Package::with('category')
+      ->where('is_active', true)
+      ->orderBy('name')
+      ->get();
+
+    $selectedCategory = $discount->category;
+
+    $selectedPackageIds = $discount->packages()
+      ->pluck('packages.id')
+      ->toArray();
 
     return view('admin.discounts.edit', compact(
       'discount',
-      'selectedCategory',
+      'categories',
       'packages',
+      'selectedCategory',
       'selectedPackageIds'
     ));
   }
@@ -92,14 +117,24 @@ class DiscountController extends Controller
   public function update(Request $request, Discount $discount)
   {
     $validated = $request->validate([
-      'category_id' => 'required|exists:categories,id',
-      'promo_name' => 'nullable|string|max:255',
-      'discount_percent' => 'required|integer|min:1|max:100',
-      'discount_start_at' => 'nullable|date',
-      'discount_end_at' => 'nullable|date|after_or_equal:discount_start_at',
-      'is_active' => 'nullable|boolean',
-      'package_ids' => 'required|array|min:1',
-      'package_ids.*' => 'exists:packages,id',
+      'category_id' => ['required', 'exists:categories,id'],
+      'promo_name' => ['nullable', 'string', 'max:255'],
+      'discount_percent' => ['required', 'integer', 'min:1', 'max:100'],
+      'discount_start_at' => ['nullable', 'date'],
+      'discount_end_at' => ['nullable', 'date', 'after_or_equal:discount_start_at'],
+      'is_active' => ['nullable', 'boolean'],
+      'package_ids' => ['required', 'array', 'min:1'],
+      'package_ids.*' => ['exists:packages,id'],
+    ], [
+      'category_id.required' => 'Kategori wajib dipilih.',
+      'category_id.exists' => 'Kategori tidak valid.',
+      'discount_percent.required' => 'Besar diskon wajib diisi.',
+      'discount_percent.min' => 'Diskon minimal 1%.',
+      'discount_percent.max' => 'Diskon maksimal 100%.',
+      'discount_end_at.after_or_equal' => 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.',
+      'package_ids.required' => 'Pilih minimal satu paket untuk diberi diskon.',
+      'package_ids.min' => 'Pilih minimal satu paket untuk diberi diskon.',
+      'package_ids.*.exists' => 'Paket yang dipilih tidak valid.',
     ]);
 
     $packagesCount = Package::where('category_id', $validated['category_id'])
@@ -109,7 +144,7 @@ class DiscountController extends Controller
     if ($packagesCount !== count($validated['package_ids'])) {
       return back()
         ->withInput()
-        ->with('error', 'Semua paket yang dipilih harus berasal dari kategori yang sama.');
+        ->with('error', 'Semua paket yang dipilih harus berasal dari kategori yang dipilih.');
     }
 
     DB::transaction(function () use ($request, $discount, $validated) {
@@ -126,7 +161,9 @@ class DiscountController extends Controller
     });
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $validated['category_id']])
+      ->route('admin.packages.index', [
+        'tab' => 'discounts',
+      ])
       ->with('success', 'Diskon berhasil diperbarui.');
   }
 
@@ -137,7 +174,9 @@ class DiscountController extends Controller
     ]);
 
     return redirect()
-      ->route('admin.packages.index', ['category' => $discount->category_id])
+      ->route('admin.packages.index', [
+        'tab' => 'discounts',
+      ])
       ->with('success', 'Status diskon berhasil diperbarui.');
   }
 }

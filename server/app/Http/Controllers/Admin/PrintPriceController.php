@@ -42,21 +42,23 @@ class PrintPriceController extends Controller
 
   public function store(Request $request)
   {
-    $validated = $request->validate([
-      'size_label' => 'required|string|max:50',
-      'base_price' => 'required|numeric|min:0',
-      'frame_price' => 'required|numeric|min:0',
-      'notes' => 'nullable|string',
-      'is_active' => 'nullable|boolean',
-    ]);
+      $validated = $request->validate([
+          'size_label' => ['required', 'string', 'max:255'],
+          'base_price' => ['required', 'numeric', 'min:0'],
+          'frame_price' => ['required', 'numeric', 'min:0'],
+          'notes' => ['nullable', 'string'],
+          'is_active' => ['nullable', 'boolean'],
+      ]);
 
-    $validated['is_active'] = $request->boolean('is_active');
+      $validated['is_active'] = $request->boolean('is_active');
 
-    PrintPrice::create($validated);
+      PrintPrice::create($validated);
 
-    return redirect()
-      ->route('admin.packages.index')
-      ->with('success', 'Pricelist cetak berhasil ditambahkan.');
+      return redirect()
+          ->route('admin.packages.index', [
+              'tab' => 'print-prices',
+          ])
+          ->with('success', 'Paket cetak berhasil ditambahkan.');
   }
 
   public function edit(PrintPrice $printPrice)

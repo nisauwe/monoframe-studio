@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -30,9 +31,11 @@ class UserController extends Controller
     $users = $query->latest()->paginate(10)->withQueryString();
 
     $totalUsers = User::count();
+
     $newUsers = User::whereMonth('created_at', now()->month)
       ->whereYear('created_at', now()->year)
       ->count();
+
     $activeUsers = User::where('is_active', true)->count();
 
     return view('admin.users.index', compact(
@@ -133,6 +136,12 @@ class UserController extends Controller
 
   public function destroy(User $user)
   {
+    if (strtolower($user->role) === 'admin') {
+      return redirect()
+        ->route('admin.users.index')
+        ->with('success', 'User dengan role Admin tidak boleh dihapus.');
+    }
+
     $user->delete();
 
     return redirect()
@@ -142,10 +151,59 @@ class UserController extends Controller
 
   public function resetAll()
   {
-    User::truncate();
+    $deletedCount = User::whereRaw('LOWER(role) != ?', ['admin'])->delete();
 
     return redirect()
       ->route('admin.users.index')
-      ->with('success', 'Semua data user berhasil dihapus dari database.');
+      ->with('success', "{$deletedCount} data user non-admin berhasil dihapus. Data Admin tetap aman.");
+  }
+
+  public function exportExcel(Request $request)
+  {
+    $users = $this->getExportUsers($request);
+
+    $fileName = 'data-user-monoframe-' . now()->format('Y-m-d-H-i-s') . '.xls';
+
+    return response()
+      ->view('admin.users.exports.excel', compact('users'))
+      ->header('Content-Type', 'application/vnd.ms-excel; charset=UTF-8')
+      ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+      ->header('Cache-Control', 'max-age=0');
+  }
+
+  public function exportPdf(Request $request)
+  {
+    $users = $this->getExportUsers($request);
+
+    $fileName = 'data-user-monoframe-' . now()->format('Y-m-d-H-i-s') . '.pdf';
+
+    $pdf = Pdf::loadView('admin.users.exports.pdf', compact('users'))
+      ->setPaper('a4', 'landscape');
+
+    return $pdf->download($fileName);
+  }
+
+  private function getExportUsers(Request $request)
+  {
+    $search = trim($request->input('search', ''));
+    $role = trim($request->input('role', ''));
+
+    $query = User::query();
+
+    if ($search !== '') {
+      $query->where(function ($q) use ($search) {
+        $q->where('name', 'like', "%{$search}%")
+          ->orWhere('email', 'like', "%{$search}%");
+      });
+    }
+
+    if ($role !== '') {
+      $query->where('role', $role);
+    }
+
+    return $query
+      ->select('name', 'email', 'role', 'phone', 'created_at')
+      ->orderBy('created_at', 'desc')
+      ->get();
   }
 }
