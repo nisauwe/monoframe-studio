@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +13,14 @@ class AuthController extends Controller
 {
   public function register(Request $request)
   {
+    $setting = AppSetting::current();
+
+    if (!$setting->allow_client_registration) {
+      return response()->json([
+        'message' => 'Registrasi klien sedang dinonaktifkan oleh admin.',
+      ], 403);
+    }
+
     $validated = $request->validate([
       'name' => ['required', 'string', 'max:255'],
       'username' => ['required', 'string', 'max:100', 'unique:users,username'],
@@ -27,7 +36,7 @@ class AuthController extends Controller
       'email' => $validated['email'],
       'phone' => $validated['phone'],
       'address' => $validated['address'],
-      'role' => 'Klien',
+      'role' => $setting->default_client_role ?: 'Klien',
       'is_active' => true,
       'password' => $validated['password'],
     ]);

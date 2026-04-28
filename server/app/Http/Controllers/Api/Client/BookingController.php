@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\BookingAddonSetting;
 use App\Models\Package;
 use App\Models\ScheduleBooking;
@@ -91,15 +92,26 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        $setting = AppSetting::current();
+
+        if (!$setting->booking_is_active) {
+            return response()->json([
+                'message' => $setting->booking_closed_message ?: 'Booking sementara dinonaktifkan oleh admin.',
+            ], 403);
+        }
+
+        $maxMoodboards = max(0, (int) $setting->max_moodboard_upload);
+        $maxExtraUnits = max(0, (int) $setting->max_extra_duration_units);
+
         $validated = $request->validate([
             'package_id' => ['required', 'exists:packages,id'],
             'booking_date' => ['required', 'date'],
             'start_time' => ['required'],
-            'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
+            'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:' . $maxExtraUnits],
             'location_name' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'video_addon_type' => ['nullable', 'in:iphone,camera'],
-            'moodboards' => ['nullable', 'array', 'max:10'],
+            'moodboards' => ['nullable', 'array', 'max:' . $maxMoodboards],
             'moodboards.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 

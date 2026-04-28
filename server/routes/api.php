@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MidtransNotificationController;
 use App\Http\Controllers\Api\MidtransPaymentSyncController;
 
+use App\Http\Controllers\Api\Client\AppSettingController as ClientAppSettingController;
 use App\Http\Controllers\Api\Client\PackageController;
 use App\Http\Controllers\Api\Client\ScheduleController;
 use App\Http\Controllers\Api\Client\BookingController;
@@ -32,12 +33,14 @@ use App\Http\Controllers\Api\FrontOffice\FinanceController as FrontOfficeFinance
 use App\Http\Controllers\Api\FrontOffice\EditAssignmentController as FrontOfficeEditAssignmentController;
 use App\Http\Controllers\Api\FrontOffice\PrintOrderController as FrontOfficePrintOrderController;
 
-
 /*
 |--------------------------------------------------------------------------
 | Public API
 |--------------------------------------------------------------------------
 */
+
+Route::get('/app-settings', [ClientAppSettingController::class, 'index']);
+Route::get('/public-reviews', [ClientAppSettingController::class, 'publicReviews']);
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

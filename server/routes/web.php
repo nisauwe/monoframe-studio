@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CallCenterContactController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\AppSettingController;
 
 Route::get('/', function () {
   return redirect()->route('admin.login');
@@ -148,5 +149,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
   Route::delete('/call-center/{callCenter}', [CallCenterContactController::class, 'destroy'])->name('call-center.destroy');
   Route::patch('/call-center/{callCenter}/toggle-status', [CallCenterContactController::class, 'toggleStatus'])->name('call-center.toggle-status');
 
-  
+  Route::get('/settings', [AppSettingController::class, 'index'])
+    ->middleware('permission:system.settings.manage')
+    ->name('settings.index');
+
+  Route::put('/settings', [AppSettingController::class, 'update'])
+    ->middleware('permission:system.settings.manage')
+    ->name('settings.update');
 });

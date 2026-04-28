@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\Review;
 use App\Models\ScheduleBooking;
 use App\Services\BookingTrackingService;
@@ -25,11 +26,15 @@ class ReviewController extends Controller
             'trackings',
         ]);
 
+        $setting = AppSetting::current();
+
         return response()->json([
             'message' => 'Data review berhasil diambil',
             'data' => [
                 'booking_id' => $booking->id,
-                'can_review' => $this->canReview($booking),
+                'review_enabled' => (bool) $setting->review_is_active,
+                'review_message' => $setting->review_invitation_message,
+                'can_review' => $setting->review_is_active && $this->canReview($booking),
                 'review' => $booking->review ? $this->formatReview($booking->review) : null,
             ],
         ]);
@@ -37,6 +42,14 @@ class ReviewController extends Controller
 
     public function store(Request $request, BookingTrackingService $trackingService)
     {
+        $setting = AppSetting::current();
+
+        if (!$setting->review_is_active) {
+            return response()->json([
+                'message' => 'Fitur review sedang dinonaktifkan oleh admin.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'booking_id' => ['required', 'exists:schedule_bookings,id'],
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
