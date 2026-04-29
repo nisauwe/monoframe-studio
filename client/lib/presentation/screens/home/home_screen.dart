@@ -5,11 +5,11 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/app_setting_model.dart';
 import '../../../data/models/package_model.dart';
-import '../../../data/models/public_review_model.dart';
 import '../../../data/providers/auth_provider.dart';
 import '../../../data/providers/package_provider.dart';
 import '../../../data/services/app_setting_service.dart';
 import '../../widgets/client_home_header.dart';
+import '../booking/booking_screen.dart';
 import '../contact/contact_screen.dart';
 import '../package/package_detail_screen.dart';
 
@@ -33,17 +33,16 @@ class _HomeScreenState extends State<HomeScreen> {
   final AppSettingService _appSettingService = AppSettingService();
 
   late Future<AppSettingModel> _settingsFuture;
-  late Future<List<PublicReviewModel>> _reviewsFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-  }
-
-  void _loadSettings() {
     _settingsFuture = _appSettingService.getAppSettings();
-    _reviewsFuture = _appSettingService.getPublicReviews();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<PackageProvider>();
+      provider.fetchAll(forceRefresh: provider.packages.isEmpty);
+    });
   }
 
   String formatCurrency(double value) {
@@ -54,6 +53,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ).format(value);
   }
 
+  String _username(AuthProvider auth) {
+    if (auth.user?.username.isNotEmpty == true)
+      return '@${auth.user!.username}';
+    return auth.user?.name ?? 'Klien';
+  }
+
   void _openContact(BuildContext context) {
     Navigator.push(
       context,
@@ -62,13 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refresh(PackageProvider packageProvider) async {
-    setState(_loadSettings);
+    setState(() {
+      _settingsFuture = _appSettingService.getAppSettings();
+    });
 
-    await Future.wait<Object?>([
-      packageProvider.refreshAll(),
-      _settingsFuture,
-      _reviewsFuture,
-    ]);
+    await Future.wait<Object?>([packageProvider.refreshAll(), _settingsFuture]);
   }
 
   @override
@@ -81,219 +84,127 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: () => _refresh(packageProvider),
         child: FutureBuilder<AppSettingModel>(
           future: _settingsFuture,
-          builder: (context, settingsSnapshot) {
-            final setting = settingsSnapshot.data;
-            final isSettingLoading =
-                settingsSnapshot.connectionState == ConnectionState.waiting;
-            final hasSettingError = settingsSnapshot.hasError;
+          builder: (context, snapshot) {
+            final setting = snapshot.data ?? AppSettingModel.fallback();
 
-            if (setting?.system.maintenanceMode == true) {
+            if (setting.system.maintenanceMode) {
               return ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
                   const SizedBox(height: 120),
-                  _MaintenanceCard(setting: setting!),
+                  _MaintenanceCard(setting: setting),
                 ],
               );
             }
 
-            final showPopularPackages =
-                setting?.clientHome.showPopularPackages ?? true;
-            final showClientReviews =
-                setting?.clientHome.showClientReviews ?? true;
-            final showSupportContact =
-                setting?.clientHome.showSupportContact ?? true;
+            final packages = packageProvider.packages;
+            final portfolios = packages
+                .where((item) => item.portfolio.isNotEmpty)
+                .toList();
+
+            final recommended = packages.take(6).toList();
 
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                if (isSettingLoading)
-                  const _LoadingHeroCard()
-                else if (hasSettingError)
-                  _ErrorHeroCard(
-                    message: settingsSnapshot.error.toString().replaceFirst(
-                      'Exception: ',
-                      '',
-                    ),
-                    username: auth.user?.username.isNotEmpty == true
-                        ? '@${auth.user!.username}'
-                        : auth.user?.name ?? 'Klien',
-                  )
-                else if (setting != null)
-                  ClientHomeHeader(
-                    setting: setting,
-                    onBookingPressed: widget.onOpenPackages,
-                    onSupportPressed: showSupportContact
-                        ? () => _openContact(context)
-                        : null,
-                  )
-                else
-                  _DefaultHeroCard(
-                    username: auth.user?.username.isNotEmpty == true
-                        ? '@${auth.user!.username}'
-                        : auth.user?.name ?? 'Klien',
-                  ),
-
-                const SizedBox(height: 24),
-
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.25,
-                  children: [
-                    _MenuCard(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'Paket Foto',
-                      subtitle: 'Lihat semua paket',
-                      onTap: widget.onOpenPackages,
-                    ),
-                    _MenuCard(
-                      icon: Icons.calendar_month_outlined,
-                      title: 'Booking',
-                      subtitle: 'Riwayat booking',
-                      onTap: widget.onOpenBooking,
-                    ),
-                    _MenuCard(
-                      icon: Icons.track_changes_outlined,
-                      title: 'Tracking',
-                      subtitle: 'Cek progres',
-                      onTap: widget.onOpenTracking,
-                    ),
-                    if (showSupportContact)
-                      _MenuCard(
-                        icon: Icons.support_agent_outlined,
-                        title: 'Kontak',
-                        subtitle: 'Tanya paket/custom',
-                        onTap: () => _openContact(context),
-                      )
-                    else
-                      _MenuCard(
-                        icon: Icons.info_outline,
-                        title: 'Info Studio',
-                        subtitle: setting?.studio.name ?? 'Monoframe',
-                        onTap: () {},
-                      ),
-                  ],
+                ClientHomeHeader(
+                  setting: setting,
+                  username: _username(auth),
+                  onBookingPressed: widget.onOpenPackages,
+                  onSupportPressed: setting.clientHome.showSupportContact
+                      ? () => _openContact(context)
+                      : null,
                 ),
-
-                if (showPopularPackages) ...[
-                  const SizedBox(height: 28),
-                  const Text(
-                    'Promo & Diskon',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  if (packageProvider.isLoading &&
-                      packageProvider.packages.isEmpty)
-                    const SizedBox(
-                      height: 220,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (packageProvider.discountedPackages.isEmpty)
-                    Container(
-                      height: 170,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Belum ada promo aktif saat ini.',
-                          style: TextStyle(color: AppColors.grey),
+                const SizedBox(height: 22),
+                _QuickActions(
+                  onPackages: widget.onOpenPackages,
+                  onBooking: widget.onOpenBooking,
+                  onTracking: widget.onOpenTracking,
+                  onContact: setting.clientHome.showSupportContact
+                      ? () => _openContact(context)
+                      : null,
+                ),
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'Portofolio Monoframe',
+                  subtitle: 'Lihat hasil foto yang sudah diinput admin.',
+                  onSeeAll: widget.onOpenPackages,
+                ),
+                const SizedBox(height: 14),
+                if (packageProvider.isLoading && portfolios.isEmpty)
+                  const SizedBox(
+                    height: 210,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (portfolios.isEmpty)
+                  const _EmptyPortfolioCard()
+                else
+                  _PortfolioSlider(
+                    packages: portfolios,
+                    formatCurrency: formatCurrency,
+                    onOpenDetail: (item) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              PackageDetailScreen(packageId: item.id),
                         ),
-                      ),
-                    )
-                  else
-                    SizedBox(
-                      height: 230,
-                      child: PageView.builder(
-                        controller: PageController(viewportFraction: 0.9),
-                        itemCount: packageProvider.discountedPackages.length,
-                        itemBuilder: (context, index) {
-                          final item =
-                              packageProvider.discountedPackages[index];
-
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: _PromoCard(
-                              package: item,
-                              formatCurrency: formatCurrency,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        PackageDetailScreen(packageId: item.id),
-                                  ),
-                                );
-                              },
+                      );
+                    },
+                  ),
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'Kategori Paket',
+                  subtitle: 'Pilih layanan sesuai kebutuhan sesi foto.',
+                  onSeeAll: widget.onOpenPackages,
+                ),
+                const SizedBox(height: 14),
+                _CategoryChips(
+                  packages: packages,
+                  onTapCategory: widget.onOpenPackages,
+                ),
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'Paket Rekomendasi',
+                  subtitle: '${packages.length} paket tersedia',
+                  onSeeAll: widget.onOpenPackages,
+                ),
+                const SizedBox(height: 14),
+                if (packageProvider.isLoading && packages.isEmpty)
+                  const SizedBox(
+                    height: 170,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (recommended.isEmpty)
+                  const _EmptyPackageCard()
+                else
+                  ...recommended.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _HomePackageCard(
+                        package: item,
+                        formatCurrency: formatCurrency,
+                        onDetail: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PackageDetailScreen(packageId: item.id),
+                            ),
+                          );
+                        },
+                        onBooking: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  BookingScreen(selectedPackage: item),
                             ),
                           );
                         },
                       ),
                     ),
-                ],
-
-                if (showClientReviews) ...[
-                  const SizedBox(height: 28),
-                  _PublicReviewSection(reviewsFuture: _reviewsFuture),
-                ],
-
-                const SizedBox(height: 28),
-
-                const Text(
-                  'Ringkasan Layanan',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 12),
-
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.photo_camera_outlined),
-                    title: const Text('Paket Foto'),
-                    subtitle: Text(
-                      '${packageProvider.packages.length} paket tersedia',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: widget.onOpenPackages,
                   ),
-                ),
-
-                const SizedBox(height: 12),
-
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.print_outlined),
-                    title: const Text('Paket Cetak & Bingkai'),
-                    subtitle: Text(
-                      '${packageProvider.printPrices.length} ukuran tersedia',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: widget.onOpenPackages,
-                  ),
-                ),
-
-                if (showSupportContact) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.support_agent_outlined),
-                      title: const Text('Kontak Monoframe'),
-                      subtitle: const Text(
-                        'Tanya paket foto, request custom, atau kendala aplikasi',
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _openContact(context),
-                    ),
-                  ),
-                ],
-
                 const SizedBox(height: 24),
               ],
             );
@@ -316,29 +227,21 @@ class _MaintenanceCard extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(
-              Icons.construction_rounded,
-              color: AppColors.primary,
-              size: 38,
-            ),
+          const Icon(
+            Icons.construction_rounded,
+            color: AppColors.primaryDark,
+            size: 58,
           ),
           const SizedBox(height: 18),
           Text(
             setting.studio.name,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
@@ -354,396 +257,481 @@ class _MaintenanceCard extends StatelessWidget {
   }
 }
 
-class _LoadingHeroCard extends StatelessWidget {
-  const _LoadingHeroCard();
+class _QuickActions extends StatelessWidget {
+  final VoidCallback onPackages;
+  final VoidCallback onBooking;
+  final VoidCallback onTracking;
+  final VoidCallback? onContact;
+
+  const _QuickActions({
+    required this.onPackages,
+    required this.onBooking,
+    required this.onTracking,
+    required this.onContact,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 190,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, Color(0xFF8A84FF)],
-        ),
+    final items = [
+      _QuickActionItem(
+        icon: Icons.photo_library_outlined,
+        title: 'Paket',
+        onTap: onPackages,
       ),
-      child: const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      _QuickActionItem(
+        icon: Icons.calendar_month_outlined,
+        title: 'Booking',
+        onTap: onBooking,
       ),
-    );
-  }
-}
-
-class _ErrorHeroCard extends StatelessWidget {
-  final String message;
-  final String username;
-
-  const _ErrorHeroCard({required this.message, required this.username});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, Color(0xFF8A84FF)],
-        ),
+      _QuickActionItem(
+        icon: Icons.track_changes_outlined,
+        title: 'Tracking',
+        onTap: onTracking,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Selamat datang,',
-            style: TextStyle(color: Colors.white70),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            username,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Lihat promo, pilih paket foto, lalu lanjut booking langsung dari aplikasi.',
-            style: TextStyle(color: Colors.white70, height: 1.5),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
+      _QuickActionItem(
+        icon: Icons.support_agent_outlined,
+        title: 'Kontak',
+        onTap: onContact ?? onPackages,
+      ),
+    ];
+
+    return GridView.builder(
+      itemCount: items.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: .82,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return InkWell(
+          onTap: item.onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              'Pengaturan aplikasi belum bisa dimuat: $message',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DefaultHeroCard extends StatelessWidget {
-  final String username;
-
-  const _DefaultHeroCard({required this.username});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, Color(0xFF8A84FF)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Selamat datang,',
-            style: TextStyle(color: Colors.white70),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            username,
-            style: const TextStyle(
               color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(item.icon, color: AppColors.primaryDark),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'Lihat promo, pilih paket foto, lalu lanjut booking langsung dari aplikasi.',
-            style: TextStyle(color: Colors.white70, height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PublicReviewSection extends StatelessWidget {
-  final Future<List<PublicReviewModel>> reviewsFuture;
-
-  const _PublicReviewSection({required this.reviewsFuture});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<PublicReviewModel>>(
-      future: reviewsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 120,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return const SizedBox.shrink();
-        }
-
-        final reviews = snapshot.data ?? <PublicReviewModel>[];
-
-        if (reviews.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Review Klien',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 182,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: reviews.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  return _ReviewCard(review: reviews[index]);
-                },
-              ),
-            ),
-          ],
         );
       },
     );
   }
 }
 
-class _ReviewCard extends StatelessWidget {
-  final PublicReviewModel review;
+class _QuickActionItem {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
 
-  const _ReviewCard({required this.review});
+  _QuickActionItem({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onSeeAll;
+
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+    required this.onSeeAll,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 270,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.person,
-                  color: AppColors.primary,
-                  size: 20,
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(color: AppColors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        TextButton(onPressed: onSeeAll, child: const Text('Lihat semua')),
+      ],
+    );
+  }
+}
+
+class _PortfolioSlider extends StatelessWidget {
+  final List<PackageModel> packages;
+  final String Function(double) formatCurrency;
+  final ValueChanged<PackageModel> onOpenDetail;
+
+  const _PortfolioSlider({
+    required this.packages,
+    required this.formatCurrency,
+    required this.onOpenDetail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 258,
+      child: PageView.builder(
+        controller: PageController(viewportFraction: .88),
+        itemCount: packages.length,
+        itemBuilder: (context, index) {
+          final item = packages[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: InkWell(
+              onTap: () => onOpenDetail(item),
+              borderRadius: BorderRadius.circular(28),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Text(
-                      review.clientName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Image.network(
+                      item.coverImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.primaryLight,
+                        child: const Icon(
+                          Icons.photo_camera_outlined,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                      ),
                     ),
-                    Text(
-                      review.packageName.isNotEmpty
-                          ? review.packageName
-                          : 'Paket Foto',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.grey,
-                        fontSize: 12,
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            AppColors.primaryDark.withOpacity(0.88),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 18,
+                      right: 18,
+                      bottom: 18,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.categoryName,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.80),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            '${item.locationTypeLabel} - ${item.durationMinutes} menit - ${formatCurrency(item.finalPrice)}',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.82),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Row(
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CategoryChips extends StatelessWidget {
+  final List<PackageModel> packages;
+  final VoidCallback onTapCategory;
+
+  const _CategoryChips({required this.packages, required this.onTapCategory});
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = packages.map((e) => e.categoryName).toSet().toList()
+      ..sort();
+
+    if (categories.isEmpty) {
+      return const _EmptyPackageCard();
+    }
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _CategoryChip(
+          label: 'Semua',
+          count: packages.length,
+          onTap: onTapCategory,
+        ),
+        ...categories.map((category) {
+          final count = packages
+              .where((item) => item.categoryName == category)
+              .length;
+          return _CategoryChip(
+            label: category,
+            count: count,
+            onTap: onTapCategory,
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.label,
+    required this.count,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      onPressed: onTap,
+      backgroundColor: Colors.white,
+      side: const BorderSide(color: AppColors.border),
+      avatar: CircleAvatar(
+        backgroundColor: AppColors.primarySoft,
+        foregroundColor: AppColors.primaryDark,
+        child: Text(count.toString(), style: const TextStyle(fontSize: 11)),
+      ),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+class _HomePackageCard extends StatelessWidget {
+  final PackageModel package;
+  final String Function(double) formatCurrency;
+  final VoidCallback onDetail;
+  final VoidCallback onBooking;
+
+  const _HomePackageCard({
+    required this.package,
+    required this.formatCurrency,
+    required this.onDetail,
+    required this.onBooking,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onDetail,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: SizedBox(
+                width: 96,
+                height: 96,
+                child: package.coverImage.isEmpty
+                    ? Container(
+                        color: AppColors.primarySoft,
+                        child: const Icon(
+                          Icons.photo_camera_outlined,
+                          color: AppColors.primaryDark,
+                        ),
+                      )
+                    : Image.network(
+                        package.coverImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.primarySoft,
+                          child: const Icon(
+                            Icons.photo_camera_outlined,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 18),
-                  const SizedBox(width: 3),
                   Text(
-                    review.rating.toString(),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    package.categoryName,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    package.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${package.locationTypeLabel} - ${package.durationMinutes} menit',
+                    style: const TextStyle(color: AppColors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    formatCurrency(package.finalPrice),
+                    style: const TextStyle(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Text(
-              review.comment.isNotEmpty
-                  ? review.comment
-                  : 'Klien puas dengan layanan Monoframe Studio.',
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF374151), height: 1.45),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _MenuCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: AppColors.primary),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+            IconButton(
+              onPressed: onBooking,
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.primaryDark,
+                foregroundColor: Colors.white,
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: AppColors.grey),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PromoCard extends StatelessWidget {
-  final PackageModel package;
-  final String Function(double) formatCurrency;
-  final VoidCallback onTap;
-
-  const _PromoCard({
-    required this.package,
-    required this.formatCurrency,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final discount = package.activeDiscount;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF111827), Color(0xFF374151)],
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.redAccent,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '${discount?.promoName ?? "Promo"} - ${discount?.discountPercent ?? 0}%',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              package.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${package.locationTypeLabel} - ${package.durationMinutes} menit - ${package.photoCount} foto edit',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            const Spacer(),
-            Text(
-              formatCurrency(package.price),
-              style: const TextStyle(
-                color: Colors.white54,
-                decoration: TextDecoration.lineThrough,
-              ),
-            ),
-            Text(
-              formatCurrency(package.finalPrice),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              icon: const Icon(Icons.arrow_forward_rounded),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyPortfolioCard extends StatelessWidget {
+  const _EmptyPortfolioCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _EmptyInfoCard(
+      icon: Icons.photo_library_outlined,
+      title: 'Portofolio belum tersedia',
+      subtitle: 'Upload portofolio dari admin saat membuat paket foto.',
+    );
+  }
+}
+
+class _EmptyPackageCard extends StatelessWidget {
+  const _EmptyPackageCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _EmptyInfoCard(
+      icon: Icons.inventory_2_outlined,
+      title: 'Paket belum tersedia',
+      subtitle: 'Paket foto akan muncul setelah admin mengaktifkannya.',
+    );
+  }
+}
+
+class _EmptyInfoCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyInfoCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.primaryDark, size: 42),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.grey, height: 1.5),
+          ),
+        ],
       ),
     );
   }

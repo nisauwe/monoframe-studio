@@ -3,7 +3,6 @@ class AppSettingModel {
   final ClientHomeSetting clientHome;
   final BookingSetting booking;
   final ReviewSetting review;
-  final NotificationSetting notification;
   final SystemSetting system;
 
   AppSettingModel({
@@ -11,7 +10,6 @@ class AppSettingModel {
     required this.clientHome,
     required this.booking,
     required this.review,
-    required this.notification,
     required this.system,
   });
 
@@ -21,8 +19,17 @@ class AppSettingModel {
       clientHome: ClientHomeSetting.fromJson(_map(json['client_home'])),
       booking: BookingSetting.fromJson(_map(json['booking'])),
       review: ReviewSetting.fromJson(_map(json['review'])),
-      notification: NotificationSetting.fromJson(_map(json['notification'])),
       system: SystemSetting.fromJson(_map(json['system'])),
+    );
+  }
+
+  factory AppSettingModel.fallback() {
+    return AppSettingModel(
+      studio: StudioSetting.fallback(),
+      clientHome: ClientHomeSetting.fallback(),
+      booking: BookingSetting.fallback(),
+      review: ReviewSetting.fallback(),
+      system: SystemSetting.fallback(),
     );
   }
 
@@ -60,10 +67,26 @@ class StudioSetting {
     required this.websiteUrl,
   });
 
+  factory StudioSetting.fallback() {
+    return StudioSetting(
+      name: 'Monoframe Studio',
+      tagline: 'Capture Your Best Moment',
+      logo: '',
+      logoUrl: '',
+      address: '',
+      mapsUrl: '',
+      email: '',
+      whatsapp: '',
+      instagramUrl: '',
+      tiktokUrl: '',
+      websiteUrl: '',
+    );
+  }
+
   factory StudioSetting.fromJson(Map<String, dynamic> json) {
     return StudioSetting(
       name: _string(json['name'], fallback: 'Monoframe Studio'),
-      tagline: _string(json['tagline']),
+      tagline: _string(json['tagline'], fallback: 'Capture Your Best Moment'),
       logo: _string(json['logo']),
       logoUrl: _string(json['logo_url']),
       address: _string(json['address']),
@@ -98,16 +121,34 @@ class ClientHomeSetting {
     required this.showSupportContact,
   });
 
+  factory ClientHomeSetting.fallback() {
+    return ClientHomeSetting(
+      title: 'Studio foto modern untuk momen terbaikmu',
+      subtitle:
+          'Pilih paket, lihat portofolio, booking jadwal, dan pantau hasil foto langsung dari aplikasi.',
+      banner: '',
+      bannerUrl: '',
+      ctaText: 'Lihat Paket',
+      showPopularPackages: true,
+      showClientReviews: true,
+      showSupportContact: true,
+    );
+  }
+
   factory ClientHomeSetting.fromJson(Map<String, dynamic> json) {
     return ClientHomeSetting(
       title: _string(
         json['title'],
-        fallback: 'Abadikan momen terbaik bersama Monoframe Studio',
+        fallback: 'Studio foto modern untuk momen terbaikmu',
       ),
-      subtitle: _string(json['subtitle']),
+      subtitle: _string(
+        json['subtitle'],
+        fallback:
+            'Pilih paket, lihat portofolio, booking jadwal, dan pantau hasil foto langsung dari aplikasi.',
+      ),
       banner: _string(json['banner']),
       bannerUrl: _string(json['banner_url']),
-      ctaText: _string(json['cta_text'], fallback: 'Booking Sekarang'),
+      ctaText: _string(json['cta_text'], fallback: 'Lihat Paket'),
       showPopularPackages: _bool(json['show_popular_packages'], fallback: true),
       showClientReviews: _bool(json['show_client_reviews'], fallback: true),
       showSupportContact: _bool(json['show_support_contact'], fallback: true),
@@ -134,12 +175,27 @@ class BookingSetting {
     required this.terms,
   });
 
+  factory BookingSetting.fallback() {
+    return BookingSetting(
+      isActive: true,
+      closedMessage: '',
+      maxMoodboardUpload: 10,
+      maxExtraDurationUnits: 10,
+      minRescheduleDays: 2,
+      policy: '',
+      terms: '',
+    );
+  }
+
   factory BookingSetting.fromJson(Map<String, dynamic> json) {
     return BookingSetting(
       isActive: _bool(json['is_active'], fallback: true),
       closedMessage: _string(json['closed_message']),
       maxMoodboardUpload: _int(json['max_moodboard_upload'], fallback: 10),
-      maxExtraDurationUnits: _int(json['max_extra_duration_units'], fallback: 10),
+      maxExtraDurationUnits: _int(
+        json['max_extra_duration_units'],
+        fallback: 10,
+      ),
       minRescheduleDays: _int(json['min_reschedule_days'], fallback: 2),
       policy: _string(json['policy']),
       terms: _string(json['terms']),
@@ -162,45 +218,25 @@ class ReviewSetting {
     required this.invitationMessage,
   });
 
+  factory ReviewSetting.fallback() {
+    return ReviewSetting(
+      isActive: true,
+      showOnClient: true,
+      minimumRatingDisplay: 4,
+      autoHideLowRating: true,
+      invitationMessage: 'Bagikan pengalamanmu bersama Monoframe Studio.',
+    );
+  }
+
   factory ReviewSetting.fromJson(Map<String, dynamic> json) {
     return ReviewSetting(
       isActive: _bool(json['is_active'], fallback: true),
       showOnClient: _bool(json['show_on_client'], fallback: true),
       minimumRatingDisplay: _int(json['minimum_rating_display'], fallback: 4),
       autoHideLowRating: _bool(json['auto_hide_low_rating'], fallback: true),
-      invitationMessage: _string(json['invitation_message']),
-    );
-  }
-}
-
-class NotificationSetting {
-  final bool emailEnabled;
-  final bool whatsappEnabled;
-  final bool inAppEnabled;
-  final String senderName;
-  final Map<String, String> templates;
-
-  NotificationSetting({
-    required this.emailEnabled,
-    required this.whatsappEnabled,
-    required this.inAppEnabled,
-    required this.senderName,
-    required this.templates,
-  });
-
-  factory NotificationSetting.fromJson(Map<String, dynamic> json) {
-    final templatesJson = json['templates'];
-    final templatesMap = templatesJson is Map
-        ? Map<String, dynamic>.from(templatesJson)
-        : <String, dynamic>{};
-
-    return NotificationSetting(
-      emailEnabled: _bool(json['email_enabled']),
-      whatsappEnabled: _bool(json['whatsapp_enabled']),
-      inAppEnabled: _bool(json['in_app_enabled'], fallback: true),
-      senderName: _string(json['sender_name'], fallback: 'Monoframe Studio'),
-      templates: templatesMap.map(
-        (key, value) => MapEntry(key, _string(value)),
+      invitationMessage: _string(
+        json['invitation_message'],
+        fallback: 'Bagikan pengalamanmu bersama Monoframe Studio.',
       ),
     );
   }
@@ -210,16 +246,20 @@ class SystemSetting {
   final bool maintenanceMode;
   final String maintenanceMessage;
   final bool allowClientRegistration;
-  final String defaultClientRole;
-  final int loginAttemptLimit;
 
   SystemSetting({
     required this.maintenanceMode,
     required this.maintenanceMessage,
     required this.allowClientRegistration,
-    required this.defaultClientRole,
-    required this.loginAttemptLimit,
   });
+
+  factory SystemSetting.fallback() {
+    return SystemSetting(
+      maintenanceMode: false,
+      maintenanceMessage: '',
+      allowClientRegistration: true,
+    );
+  }
 
   factory SystemSetting.fromJson(Map<String, dynamic> json) {
     return SystemSetting(
@@ -229,21 +269,14 @@ class SystemSetting {
         json['allow_client_registration'],
         fallback: true,
       ),
-      defaultClientRole: _string(json['default_client_role'], fallback: 'Klien'),
-      loginAttemptLimit: _int(json['login_attempt_limit'], fallback: 5),
     );
   }
 }
 
 String _string(dynamic value, {String fallback = ''}) {
   if (value == null) return fallback;
-
   final text = value.toString().trim();
-
-  if (text.isEmpty || text.toLowerCase() == 'null') {
-    return fallback;
-  }
-
+  if (text.isEmpty || text.toLowerCase() == 'null') return fallback;
   return text;
 }
 
@@ -251,17 +284,11 @@ bool _bool(dynamic value, {bool fallback = false}) {
   if (value == null) return fallback;
   if (value is bool) return value;
   if (value is num) return value != 0;
-
   final text = value.toString().toLowerCase().trim();
-
-  if (text == 'true' || text == '1' || text == 'yes' || text == 'on') {
+  if (text == 'true' || text == '1' || text == 'yes' || text == 'on')
     return true;
-  }
-
-  if (text == 'false' || text == '0' || text == 'no' || text == 'off') {
+  if (text == 'false' || text == '0' || text == 'no' || text == 'off')
     return false;
-  }
-
   return fallback;
 }
 
@@ -269,6 +296,5 @@ int _int(dynamic value, {int fallback = 0}) {
   if (value == null) return fallback;
   if (value is int) return value;
   if (value is num) return value.toInt();
-
   return int.tryParse(value.toString()) ?? fallback;
 }

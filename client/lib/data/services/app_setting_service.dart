@@ -12,15 +12,13 @@ class AppSettingService {
     try {
       final response = await _dio.get('/app-settings');
       final map = _extractMap(response.data);
-
       return AppSettingModel.fromJson(map);
     } on DioException catch (e) {
       debugPrint('GET APP SETTINGS ERROR: ${e.response?.data}');
-      throw Exception(
-        _messageFromDio(e, 'Gagal mengambil pengaturan aplikasi'),
-      );
+      return AppSettingModel.fallback();
     } catch (e) {
-      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+      debugPrint('GET APP SETTINGS ERROR: $e');
+      return AppSettingModel.fallback();
     }
   }
 
@@ -28,19 +26,18 @@ class AppSettingService {
     try {
       final response = await _dio.get('/public-reviews');
       final list = _extractList(response.data);
-
-      return list.map((item) {
-        return PublicReviewModel.fromJson(
-          Map<String, dynamic>.from(item),
-        );
-      }).toList();
+      return list
+          .map(
+            (item) =>
+                PublicReviewModel.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList();
     } on DioException catch (e) {
       debugPrint('GET PUBLIC REVIEWS ERROR: ${e.response?.data}');
-      throw Exception(
-        _messageFromDio(e, 'Gagal mengambil review publik'),
-      );
+      return <PublicReviewModel>[];
     } catch (e) {
-      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+      debugPrint('GET PUBLIC REVIEWS ERROR: $e');
+      return <PublicReviewModel>[];
     }
   }
 
@@ -49,17 +46,14 @@ class AppSettingService {
       if (data['data'] is Map<String, dynamic>) {
         return Map<String, dynamic>.from(data['data']);
       }
-
       return data;
     }
 
     if (data is Map) {
       final map = Map<String, dynamic>.from(data);
-
       if (map['data'] is Map) {
         return Map<String, dynamic>.from(map['data']);
       }
-
       return map;
     }
 
@@ -68,21 +62,9 @@ class AppSettingService {
 
   List<dynamic> _extractList(dynamic data) {
     if (data is List) return data;
-
     if (data is Map && data['data'] is List) {
       return data['data'] as List<dynamic>;
     }
-
     return <dynamic>[];
-  }
-
-  String _messageFromDio(DioException e, String fallback) {
-    final data = e.response?.data;
-
-    if (data is Map && data['message'] != null) {
-      return data['message'].toString();
-    }
-
-    return fallback;
   }
 }

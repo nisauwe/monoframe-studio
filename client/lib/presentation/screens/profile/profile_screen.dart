@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/providers/auth_provider.dart';
-import '../auth/login_screen.dart';
+import '../auth/auth_welcome_screen.dart';
 import '../contact/contact_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -15,7 +15,7 @@ class ProfileScreen extends StatelessWidget {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const AuthWelcomeScreen()),
       (route) => false,
     );
   }
@@ -107,31 +107,6 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          const SizedBox(height: 18),
-
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.support_agent_outlined,
-                    color: Color(0xFF6C63FF),
-                  ),
-                  title: const Text('Kontak Monoframe'),
-                  subtitle: const Text(
-                    'Tanya paket foto, request custom, atau kendala aplikasi',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _openContactScreen(context),
-                ),
-              ],
-            ),
-          ),
-
           const SizedBox(height: 24),
 
           ElevatedButton.icon(

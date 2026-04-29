@@ -42,6 +42,12 @@ use App\Http\Controllers\Api\FrontOffice\PrintOrderController as FrontOfficePrin
 Route::get('/app-settings', [ClientAppSettingController::class, 'index']);
 Route::get('/public-reviews', [ClientAppSettingController::class, 'publicReviews']);
 
+Route::post('/register/request-otp', [AuthController::class, 'requestRegisterOtp']);
+Route::post('/register/verify-otp', [AuthController::class, 'verifyRegisterOtp']);
+
+Route::post('/forgot-password/request-otp', [AuthController::class, 'requestPasswordResetOtp']);
+Route::post('/forgot-password/reset', [AuthController::class, 'resetPasswordWithOtp']);
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 

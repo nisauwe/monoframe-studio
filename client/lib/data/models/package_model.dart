@@ -1,3 +1,5 @@
+import '../services/dio_client.dart';
+
 class PackageDiscount {
   final int id;
   final String promoName;
@@ -74,6 +76,8 @@ class PackageModel {
 
     final portfolioRaw = json['portfolio'] is List
         ? json['portfolio'] as List
+        : json['portfolio_urls'] is List
+        ? json['portfolio_urls'] as List
         : [];
 
     return PackageModel(
@@ -90,11 +94,19 @@ class PackageModel {
           ? _toInt(json['person_count'])
           : null,
       isActive: _toBool(json['is_active'] ?? true),
-      portfolio: portfolioRaw.map((e) => e.toString()).toList(),
+      portfolio: portfolioRaw
+          .map((e) => DioClient.normalizePublicUrl(e))
+          .where((e) => e.trim().isNotEmpty)
+          .toList(),
       discounts: discountsRaw
           .map((e) => PackageDiscount.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
+  }
+
+  String get coverImage {
+    if (portfolio.isEmpty) return '';
+    return portfolio.first;
   }
 
   PackageDiscount? get activeDiscount {
@@ -120,13 +132,17 @@ class PackageModel {
   }
 
   static int _toInt(dynamic value) {
+    if (value == null) return 0;
     if (value is int) return value;
+    if (value is num) return value.toInt();
     return int.tryParse(value.toString()) ?? 0;
   }
 
   static double _toDouble(dynamic value) {
+    if (value == null) return 0;
     if (value is double) return value;
     if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
   }
 

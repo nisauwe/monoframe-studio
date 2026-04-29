@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/providers/auth_provider.dart';
-import '../auth/login_screen.dart';
+import '../auth/auth_welcome_screen.dart';
 import '../home/main_navigation_screen.dart';
 import '../frontoffice/front_office_main_screen.dart';
 import '../fotografer/photographer_main_screen.dart';
@@ -32,7 +32,7 @@ class _RoleGateScreenState extends State<RoleGateScreen> {
     if (user == null) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const AuthWelcomeScreen()),
         (route) => false,
       );
       return;
@@ -90,7 +90,7 @@ class _RoleNotReadyScreen extends StatelessWidget {
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const AuthWelcomeScreen()),
       (route) => false,
     );
   }
