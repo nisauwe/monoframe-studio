@@ -190,17 +190,32 @@ class _PortfolioHero extends StatelessWidget {
           itemCount: package.portfolio.length,
           onPageChanged: onChanged,
           itemBuilder: (context, index) {
+            final imageUrl = package.portfolio[index];
+            debugPrint('DETAIL PACKAGE IMAGE URL: $imageUrl');
+
             return Image.network(
-              package.portfolio[index],
+              imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: AppColors.primaryLight,
-                child: const Icon(
-                  Icons.broken_image_outlined,
-                  size: 54,
-                  color: Colors.white,
-                ),
-              ),
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('DETAIL PACKAGE IMAGE ERROR URL: $imageUrl');
+                debugPrint('DETAIL PACKAGE IMAGE ERROR: $error');
+
+                return Container(
+                  color: AppColors.primaryLight,
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Gambar gagal dimuat\n$imageUrl',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),

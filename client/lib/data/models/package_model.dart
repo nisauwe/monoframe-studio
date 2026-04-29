@@ -106,6 +106,13 @@ class PackageModel {
         ? json['discounts'] as List
         : [];
 
+    /*
+    |--------------------------------------------------------------------------
+    | PENTING
+    |--------------------------------------------------------------------------
+    | Utamakan portfolio_urls dari server.
+    | Jangan ubah full URL yang sudah dikirim server.
+    */
     final portfolioRaw = json['portfolio_urls'] is List
         ? json['portfolio_urls'] as List
         : json['portfolio'] is List
@@ -137,7 +144,7 @@ class PackageModel {
           : null,
       isActive: _toBool(json['is_active'] ?? true),
       portfolio: portfolioRaw
-          .map((e) => DioClient.normalizePublicUrl(e))
+          .map((e) => _normalizePortfolioUrl(e))
           .where((e) => e.trim().isNotEmpty)
           .toList(),
       discounts: discountsRaw
@@ -147,6 +154,27 @@ class PackageModel {
           ? null
           : PackageDiscount.fromJson(currentDiscountMap),
     );
+  }
+
+  static String _normalizePortfolioUrl(dynamic value) {
+    final raw = value == null ? '' : value.toString().trim();
+
+    if (raw.isEmpty || raw.toLowerCase() == 'null') {
+      return '';
+    }
+
+    final cleaned = raw.replaceAll('\\', '/');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Jika server sudah kirim URL lengkap, jangan diubah lagi.
+    |--------------------------------------------------------------------------
+    */
+    if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+      return cleaned;
+    }
+
+    return DioClient.normalizePublicUrl(cleaned);
   }
 
   String get coverImage {
