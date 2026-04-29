@@ -32,139 +32,180 @@ class ClientHomeHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: AppColors.darkBrandGradient,
+        gradient: AppColors.welcomeDarkGradient,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.22),
+            color: AppColors.welcomeBlueDark.withOpacity(0.24),
             blurRadius: 24,
             offset: const Offset(0, 14),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
+          Positioned(
+            top: -54,
+            right: -44,
+            child: _HeaderCircle(
+              size: 150,
+              color: Colors.white.withOpacity(0.13),
+            ),
+          ),
+          Positioned(
+            bottom: -62,
+            left: -58,
+            child: _HeaderCircle(
+              size: 160,
+              color: Colors.white.withOpacity(0.08),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const MonoframeLogoMark(size: 48),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      studio.name.isNotEmpty ? studio.name : 'Monoframe Studio',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Halo, $clientName',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.78),
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Stack(
-                clipBehavior: Clip.none,
+              Row(
                 children: [
-                  IconButton(
-                    onPressed: onNotificationPressed,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.15),
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: const Icon(Icons.notifications_none_rounded),
-                  ),
-                  if (unreadNotificationCount > 0)
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                        child: Text(
-                          unreadNotificationCount > 99
-                              ? '99+'
-                              : unreadNotificationCount.toString(),
+                  const MonoframeLogoMark(size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          studio.name.isNotEmpty
+                              ? studio.name
+                              : 'Monoframe Studio',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 17,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Halo, $clientName',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.82),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        onPressed: onNotificationPressed,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.16),
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.notifications_none_rounded),
+                      ),
+                      if (unreadNotificationCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              unreadNotificationCount > 99
+                                  ? '99+'
+                                  : unreadNotificationCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            home.title.isNotEmpty
-                ? home.title
-                : 'Abadikan momen terbaik bersama Monoframe Studio',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              height: 1.16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            home.subtitle.isNotEmpty
-                ? home.subtitle
-                : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
-              fontSize: 12.8,
-              height: 1.45,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _HeaderActionButton(
-                  icon: Icons.calendar_month_rounded,
-                  label: 'Booking',
-                  onTap: onBookingPressed,
+              const SizedBox(height: 16),
+              Text(
+                home.title.isNotEmpty
+                    ? home.title
+                    : 'Abadikan momen terbaik bersama Monoframe Studio',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  height: 1.16,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeaderActionButton(
-                  icon: Icons.support_agent_rounded,
-                  label: 'Call Center',
-                  onTap: onSupportPressed,
+              const SizedBox(height: 8),
+              Text(
+                home.subtitle.isNotEmpty
+                    ? home.subtitle
+                    : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.86),
+                  fontSize: 12.8,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _HeaderActionButton(
+                      icon: Icons.calendar_month_rounded,
+                      label: 'Booking',
+                      onTap: onBookingPressed,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _HeaderActionButton(
+                      icon: Icons.support_agent_rounded,
+                      label: 'Call Center',
+                      onTap: onSupportPressed,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HeaderCircle extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _HeaderCircle({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }
@@ -193,11 +234,18 @@ class _HeaderActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: enabled ? Colors.white : Colors.white.withOpacity(0.45),
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.welcomeBlueDark.withOpacity(0.12),
+              blurRadius: 14,
+              offset: const Offset(0, 7),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: AppColors.primaryDark),
+            Icon(icon, size: 18, color: AppColors.welcomeBlueDark),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
@@ -205,7 +253,7 @@ class _HeaderActionButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: AppColors.primaryDark,
+                  color: AppColors.welcomeBlueDark,
                   fontWeight: FontWeight.w900,
                   fontSize: 12.5,
                 ),

@@ -25,6 +25,15 @@ class AppColors {
   static const Color background = Color(0xFFF7FBFD);
   static const Color white = Colors.white;
 
+  // Warna welcome screen yang kamu suka.
+  static const Color welcomeBlueDark = Color(0xFF233B93);
+  static const Color welcomeBlueMid = Color(0xFF344FA5);
+  static const Color welcomeBlueLight = Color(0xFF5E7BDA);
+
+  static const Color welcomeCardLight = Color(0xFFF0FAFF);
+  static const Color welcomeCardMid = Color(0xFFD9F0FA);
+  static const Color welcomeCardDeep = Color(0xFFC5E4F2);
+
   static const LinearGradient brandGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -35,5 +44,19 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [primaryDark, primary],
+  );
+
+  // Dipakai untuk header home, promo, selected category, dan tombol home aktif.
+  static const LinearGradient welcomeDarkGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [welcomeBlueDark, welcomeBlueMid, welcomeBlueLight],
+  );
+
+  // Dipakai untuk card biasa di home.
+  static const LinearGradient welcomeCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [welcomeCardLight, welcomeCardMid, welcomeCardDeep],
   );
 }
