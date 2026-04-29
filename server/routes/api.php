@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\FrontOffice\ProgressMonitoringController as FrontOf
 use App\Http\Controllers\Api\FrontOffice\FinanceController as FrontOfficeFinanceController;
 use App\Http\Controllers\Api\FrontOffice\EditAssignmentController as FrontOfficeEditAssignmentController;
 use App\Http\Controllers\Api\FrontOffice\PrintOrderController as FrontOfficePrintOrderController;
+use App\Http\Controllers\Api\Client\ClientNotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -131,6 +132,8 @@ Route::middleware('auth:sanctum')->group(function () {
         */
 
         Route::get('/tracking/{booking}', [TrackingController::class, 'show']);
+
+        Route::get('/notifications', [ClientNotificationController::class, 'index']);
 
         /*
         |--------------------------------------------------------------------------

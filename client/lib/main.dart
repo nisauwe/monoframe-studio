@@ -17,6 +17,7 @@ import 'data/providers/editor_provider.dart';
 import 'data/providers/print_order_provider.dart';
 import 'data/providers/front_office_print_order_provider.dart';
 import 'data/providers/review_provider.dart';
+import 'data/providers/client_notification_provider.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
 Future<void> main() async {
@@ -45,6 +46,7 @@ class MonoframeClientApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PrintOrderProvider()),
         ChangeNotifierProvider(create: (_) => FrontOfficePrintOrderProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => ClientNotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

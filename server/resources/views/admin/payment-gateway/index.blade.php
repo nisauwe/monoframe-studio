@@ -265,7 +265,12 @@
                     <label class="form-label">Callback / Notification URL</label>
                     <input type="text" name="notification_url" class="form-control gateway-input"
                       value="{{ old('notification_url', $gateway->notification_url) }}"
-                      placeholder="https://domain.com/payment/notification">
+                      placeholder="{{ url('/api/midtrans/notification') }}">
+                    <small class="text-muted d-block mt-1">
+                      Endpoint callback yang benar untuk repo ini adalah
+                      <strong>{{ url('/api/midtrans/notification') }}</strong>.
+                      Untuk testing lokal, gunakan URL publik dari ngrok/cloudflared, bukan 127.0.0.1 langsung.
+                    </small>
                   </div>
 
                   <div class="col-md-4">

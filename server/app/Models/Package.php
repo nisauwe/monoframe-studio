@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 
 class Package extends Model
 {
@@ -30,7 +31,9 @@ class Package extends Model
   protected $appends = [
     'current_discount',
     'discounted_price',
+    'portfolio_urls',
   ];
+
   public function isIndoor(): bool
   {
     return $this->location_type === 'indoor';
@@ -73,5 +76,34 @@ class Package extends Model
     $discountAmount = ($this->price * $discount->discount_percent) / 100;
 
     return (int) round($this->price - $discountAmount);
+  }
+
+  public function getPortfolioUrlsAttribute(): array
+  {
+    $portfolio = $this->portfolio ?? [];
+
+    if (!is_array($portfolio)) {
+      return [];
+    }
+
+    return collect($portfolio)
+      ->filter(fn ($path) => filled($path))
+      ->map(function ($path) {
+        $path = str_replace('\\', '/', trim((string) $path));
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+          return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (Str::startsWith($path, 'storage/')) {
+          return url('/' . $path);
+        }
+
+        return url('/storage/' . $path);
+      })
+      ->values()
+      ->toArray();
   }
 }

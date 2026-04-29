@@ -18,7 +18,10 @@ class PaymentGatewayController extends Controller
       $this->defaultGatewayData()
     );
 
-    $logs = PaymentGatewayLog::latest()->take(10)->get();
+    $logs = $gateway->logs()
+      ->latest()
+      ->take(10)
+      ->get();
 
     $availablePaymentTypes = $this->availablePaymentTypes();
 
@@ -36,23 +39,64 @@ class PaymentGatewayController extends Controller
       $this->defaultGatewayData()
     );
 
+    /*
+    |--------------------------------------------------------------------------
+    | Normalisasi URL sebelum validasi
+    |--------------------------------------------------------------------------
+    | Tujuannya:
+    | - Jika kosong, simpan null.
+    | - Jika user isi 127.0.0.1:8000/api/midtrans/notification,
+    |   otomatis menjadi http://127.0.0.1:8000/api/midtrans/notification.
+    | - Jika user isi domain tanpa protocol, otomatis menjadi https://domain.
+    */
+    $request->merge([
+      'notification_url' => $this->normalizeNullableUrl($request->input('notification_url')),
+      'finish_url' => $this->normalizeNullableUrl($request->input('finish_url')),
+      'unfinish_url' => $this->normalizeNullableUrl($request->input('unfinish_url')),
+      'error_url' => $this->normalizeNullableUrl($request->input('error_url')),
+    ]);
+
     $validated = $request->validate([
       'environment' => ['required', 'in:sandbox,production'],
       'merchant_id' => ['nullable', 'string', 'max:255'],
       'client_key' => ['nullable', 'string'],
       'server_key' => ['nullable', 'string'],
-      'notification_url' => ['nullable', 'url'],
-      'finish_url' => ['nullable', 'url'],
-      'unfinish_url' => ['nullable', 'url'],
-      'error_url' => ['nullable', 'url'],
+
+      /*
+      |--------------------------------------------------------------------------
+      | Jangan pakai rule bawaan "url"
+      |--------------------------------------------------------------------------
+      | Rule bawaan Laravel sering membuat URL development seperti localhost /
+      | 127.0.0.1 merepotkan. Kita pakai validasi custom agar lebih jelas.
+      */
+      'notification_url' => ['nullable', 'string', 'max:2048', $this->validHttpUrlRule('Notification URL')],
+      'finish_url' => ['nullable', 'string', 'max:2048', $this->validHttpUrlRule('Success Redirect URL')],
+      'unfinish_url' => ['nullable', 'string', 'max:2048', $this->validHttpUrlRule('Unfinish Redirect URL')],
+      'error_url' => ['nullable', 'string', 'max:2048', $this->validHttpUrlRule('Error Redirect URL')],
+
       'expiry_minutes' => ['required', 'integer', 'min:1', 'max:1440'],
       'admin_fee' => ['required', 'integer', 'min:0'],
       'enabled_payment_types' => ['nullable', 'array'],
-      'enabled_payment_types.*' => ['string', 'in:' . implode(',', array_keys($this->availablePaymentTypes()))],
+      'enabled_payment_types.*' => [
+        'string',
+        'in:' . implode(',', array_keys($this->availablePaymentTypes())),
+      ],
       'is_active' => ['nullable', 'boolean'],
       'auto_update_status' => ['nullable', 'boolean'],
       'is_visible_to_client' => ['nullable', 'boolean'],
       'webhook_enabled' => ['nullable', 'boolean'],
+    ], [
+      'environment.required' => 'Mode environment wajib dipilih.',
+      'environment.in' => 'Mode environment harus sandbox atau production.',
+      'expiry_minutes.required' => 'Expired payment wajib diisi.',
+      'expiry_minutes.integer' => 'Expired payment harus berupa angka.',
+      'expiry_minutes.min' => 'Expired payment minimal 1 menit.',
+      'expiry_minutes.max' => 'Expired payment maksimal 1440 menit.',
+      'admin_fee.required' => 'Biaya admin wajib diisi.',
+      'admin_fee.integer' => 'Biaya admin harus berupa angka.',
+      'admin_fee.min' => 'Biaya admin tidak boleh kurang dari 0.',
+      'enabled_payment_types.array' => 'Channel pembayaran tidak valid.',
+      'enabled_payment_types.*.in' => 'Ada channel pembayaran yang tidak dikenali.',
     ]);
 
     $environment = $validated['environment'];
@@ -85,11 +129,18 @@ class PaymentGatewayController extends Controller
       'payload' => [
         'environment' => $gateway->environment,
         'merchant_id' => $gateway->merchant_id,
+        'notification_url' => $gateway->notification_url,
         'enabled_payment_types' => $gateway->enabled_payment_types,
       ],
     ]);
 
-    return back()->with('success', 'Konfigurasi payment gateway berhasil disimpan.');
+    $message = 'Konfigurasi payment gateway berhasil disimpan.';
+
+    if ($gateway->notification_url && $this->isLocalUrl($gateway->notification_url)) {
+      $message .= ' Catatan: Notification URL masih memakai localhost / IP lokal. URL ini boleh untuk disimpan saat development, tetapi Midtrans tidak bisa mengirim callback ke localhost. Untuk testing callback pembayaran, gunakan URL publik dari ngrok atau cloudflared.';
+    }
+
+    return back()->with('success', $message);
   }
 
   public function testConnection()
@@ -111,7 +162,14 @@ class PaymentGatewayController extends Controller
         ->withBasicAuth($gateway->server_key, '')
         ->get($this->apiBaseUrl($gateway->environment) . "/v2/{$dummyOrderId}/status");
 
-      if (in_array($response->status(), [200, 404])) {
+      /*
+      |--------------------------------------------------------------------------
+      | 404 tetap dianggap koneksi berhasil
+      |--------------------------------------------------------------------------
+      | Karena order dummy memang tidak ada di Midtrans.
+      | Yang penting server key bisa menjangkau endpoint Midtrans.
+      */
+      if (in_array($response->status(), [200, 404], true)) {
         $gateway->update([
           'last_tested_at' => now(),
           'last_test_status' => 'success',
@@ -197,10 +255,19 @@ class PaymentGatewayController extends Controller
       'server_key' => null,
       'snap_url' => $this->snapUrl('sandbox'),
       'api_base_url' => $this->apiBaseUrl('sandbox'),
+
+      /*
+      |--------------------------------------------------------------------------
+      | Kosongkan default URL
+      |--------------------------------------------------------------------------
+      | URL callback harus disesuaikan dengan domain server yang sedang dipakai.
+      | Untuk lokal gunakan ngrok/cloudflared.
+      */
       'notification_url' => null,
       'finish_url' => null,
       'unfinish_url' => null,
       'error_url' => null,
+
       'expiry_minutes' => 60,
       'admin_fee' => 0,
       'enabled_payment_types' => ['qris', 'bank_transfer', 'gopay', 'bni_va', 'bca_va'],
@@ -228,14 +295,138 @@ class PaymentGatewayController extends Controller
   private function availablePaymentTypes(): array
   {
     return [
-      'qris' => ['label' => 'QRIS', 'description' => 'Pembayaran via QRIS'],
-      'bank_transfer' => ['label' => 'Bank Transfer', 'description' => 'VA / transfer bank'],
-      'gopay' => ['label' => 'GoPay', 'description' => 'Pembayaran via GoPay'],
-      'shopeepay' => ['label' => 'ShopeePay', 'description' => 'Pembayaran via ShopeePay'],
-      'credit_card' => ['label' => 'Credit Card', 'description' => 'Kartu kredit/debit'],
-      'bni_va' => ['label' => 'BNI VA', 'description' => 'Virtual account BNI'],
-      'bca_va' => ['label' => 'BCA VA', 'description' => 'Virtual account BCA'],
-      'permata_va' => ['label' => 'Permata VA', 'description' => 'Virtual account Permata'],
+      'qris' => [
+        'label' => 'QRIS',
+        'description' => 'Pembayaran via QRIS',
+      ],
+      'bank_transfer' => [
+        'label' => 'Bank Transfer',
+        'description' => 'VA / transfer bank',
+      ],
+      'gopay' => [
+        'label' => 'GoPay',
+        'description' => 'Pembayaran via GoPay',
+      ],
+      'shopeepay' => [
+        'label' => 'ShopeePay',
+        'description' => 'Pembayaran via ShopeePay',
+      ],
+      'credit_card' => [
+        'label' => 'Credit Card',
+        'description' => 'Kartu kredit/debit',
+      ],
+      'bni_va' => [
+        'label' => 'BNI VA',
+        'description' => 'Virtual account BNI',
+      ],
+      'bca_va' => [
+        'label' => 'BCA VA',
+        'description' => 'Virtual account BCA',
+      ],
+      'permata_va' => [
+        'label' => 'Permata VA',
+        'description' => 'Virtual account Permata',
+      ],
     ];
+  }
+
+  private function normalizeNullableUrl($value): ?string
+  {
+    $value = trim((string) ($value ?? ''));
+
+    if ($value === '') {
+      return null;
+    }
+
+    // Hilangkan spasi yang tidak sengaja ikut tercopy.
+    $value = preg_replace('/\s+/', '', $value);
+
+    if (Str::startsWith($value, '//')) {
+      return 'https:' . $value;
+    }
+
+    // Jika user tidak menulis http:// atau https://, tambahkan otomatis.
+    if (!preg_match('/^https?:\/\//i', $value)) {
+      $probeHost = parse_url('http://' . $value, PHP_URL_HOST);
+
+      $scheme = $this->isLocalHostValue($probeHost)
+        ? 'http://'
+        : 'https://';
+
+      return $scheme . $value;
+    }
+
+    return $value;
+  }
+
+  private function validHttpUrlRule(string $label): \Closure
+  {
+    return function (string $attribute, $value, \Closure $fail) use ($label): void {
+      if ($value === null || $value === '') {
+        return;
+      }
+
+      if (!is_string($value)) {
+        $fail($label . ' harus berupa teks URL.');
+        return;
+      }
+
+      if (preg_match('/\s/', $value)) {
+        $fail($label . ' tidak boleh mengandung spasi.');
+        return;
+      }
+
+      $parts = parse_url($value);
+
+      if ($parts === false) {
+        $fail($label . ' tidak valid.');
+        return;
+      }
+
+      $scheme = strtolower($parts['scheme'] ?? '');
+      $host = $parts['host'] ?? '';
+
+      if (!in_array($scheme, ['http', 'https'], true)) {
+        $fail($label . ' harus diawali http:// atau https://.');
+        return;
+      }
+
+      if ($host === '') {
+        $fail($label . ' harus memiliki host/domain yang jelas.');
+        return;
+      }
+
+      if (Str::contains($host, '_')) {
+        $fail($label . ' tidak boleh memakai underscore pada domain/host.');
+        return;
+      }
+    };
+  }
+
+  private function isLocalUrl(?string $url): bool
+  {
+    if (!$url) {
+      return false;
+    }
+
+    $host = parse_url($url, PHP_URL_HOST);
+
+    return $this->isLocalHostValue($host);
+  }
+
+  private function isLocalHostValue(?string $host): bool
+  {
+    if (!$host) {
+      return false;
+    }
+
+    $host = strtolower($host);
+
+    return $host === 'localhost'
+      || $host === '127.0.0.1'
+      || $host === '::1'
+      || Str::startsWith($host, '192.168.')
+      || Str::startsWith($host, '10.')
+      || preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $host);
   }
 }

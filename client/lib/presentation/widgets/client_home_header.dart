@@ -6,14 +6,18 @@ import 'monoframe_logo_mark.dart';
 
 class ClientHomeHeader extends StatelessWidget {
   final AppSettingModel setting;
-  final String username;
+  final String clientName;
+  final int unreadNotificationCount;
+  final VoidCallback? onNotificationPressed;
   final VoidCallback? onBookingPressed;
   final VoidCallback? onSupportPressed;
 
   const ClientHomeHeader({
     super.key,
     required this.setting,
-    required this.username,
+    required this.clientName,
+    required this.unreadNotificationCount,
+    this.onNotificationPressed,
     this.onBookingPressed,
     this.onSupportPressed,
   });
@@ -25,15 +29,15 @@ class ClientHomeHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(28),
         gradient: AppColors.darkBrandGradient,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.25),
-            blurRadius: 26,
-            offset: const Offset(0, 15),
+            color: AppColors.primaryDark.withOpacity(0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
@@ -42,8 +46,8 @@ class ClientHomeHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const MonoframeLogoMark(size: 56),
-              const SizedBox(width: 14),
+              const MonoframeLogoMark(size: 48),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,116 +58,161 @@ class ClientHomeHeader extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Hi, $username',
+                      'Halo, $clientName',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.76),
+                        color: Colors.white.withOpacity(0.78),
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (home.showSupportContact)
-                IconButton(
-                  onPressed: onSupportPressed,
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.14),
-                    foregroundColor: Colors.white,
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    onPressed: onNotificationPressed,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.15),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.notifications_none_rounded),
                   ),
-                  icon: const Icon(Icons.support_agent_rounded),
-                ),
+                  if (unreadNotificationCount > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Text(
+                          unreadNotificationCount > 99
+                              ? '99+'
+                              : unreadNotificationCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-          if (home.bannerUrl.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.network(
-                  home.bannerUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           Text(
             home.title.isNotEmpty
                 ? home.title
-                : 'Studio foto modern untuk momen terbaikmu',
+                : 'Abadikan momen terbaik bersama Monoframe Studio',
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 26,
-              height: 1.12,
+              fontSize: 22,
+              height: 1.16,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             home.subtitle.isNotEmpty
                 ? home.subtitle
-                : 'Pilih paket, lihat portofolio, booking jadwal, dan pantau hasil foto langsung dari aplikasi.',
+                : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white.withOpacity(0.82),
-              fontSize: 13.5,
-              height: 1.55,
+              fontSize: 12.8,
+              height: 1.45,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: setting.booking.isActive ? onBookingPressed : null,
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: Text(
-                    home.ctaText.isNotEmpty ? home.ctaText : 'Lihat Paket',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.primaryDark,
-                    disabledBackgroundColor: Colors.white.withOpacity(0.50),
-                    disabledForegroundColor: AppColors.primaryDark.withOpacity(
-                      0.45,
-                    ),
-                  ),
+                child: _HeaderActionButton(
+                  icon: Icons.calendar_month_rounded,
+                  label: 'Booking',
+                  onTap: onBookingPressed,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HeaderActionButton(
+                  icon: Icons.support_agent_rounded,
+                  label: 'Call Center',
+                  onTap: onSupportPressed,
                 ),
               ),
             ],
           ),
-          if (!setting.booking.isActive &&
-              setting.booking.closedMessage.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(16),
-              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  const _HeaderActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: enabled ? Colors.white : Colors.white.withOpacity(0.45),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: AppColors.primaryDark),
+            const SizedBox(width: 8),
+            Flexible(
               child: Text(
-                setting.booking.closedMessage,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.90),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                  height: 1.4,
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12.5,
                 ),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

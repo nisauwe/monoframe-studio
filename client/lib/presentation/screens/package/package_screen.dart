@@ -10,7 +10,9 @@ import '../booking/booking_screen.dart';
 import 'package_detail_screen.dart';
 
 class PackageScreen extends StatefulWidget {
-  const PackageScreen({super.key});
+  final String? initialCategory;
+
+  const PackageScreen({super.key, this.initialCategory});
 
   @override
   State<PackageScreen> createState() => _PackageScreenState();
@@ -18,6 +20,28 @@ class PackageScreen extends StatefulWidget {
 
 class _PackageScreenState extends State<PackageScreen> {
   String selectedCategory = 'Semua';
+
+  @override
+  void initState() {
+    super.initState();
+    selectedCategory = _normalizeCategory(widget.initialCategory);
+  }
+
+  @override
+  void didUpdateWidget(covariant PackageScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.initialCategory != widget.initialCategory) {
+      setState(() {
+        selectedCategory = _normalizeCategory(widget.initialCategory);
+      });
+    }
+  }
+
+  String _normalizeCategory(String? value) {
+    final text = value?.trim() ?? '';
+    return text.isEmpty ? 'Semua' : text;
+  }
 
   String formatCurrency(double value) {
     return NumberFormat.currency(
@@ -35,6 +59,7 @@ class _PackageScreenState extends State<PackageScreen> {
 
   List<PackageModel> _filtered(List<PackageModel> packages) {
     if (selectedCategory == 'Semua') return packages;
+
     return packages
         .where((item) => item.categoryName == selectedCategory)
         .toList();
@@ -59,7 +84,7 @@ class _PackageScreenState extends State<PackageScreen> {
                 provider.printPrices.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : ListView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 118),
                 children: [
                   const Text(
                     'Paket Layanan',
@@ -67,7 +92,7 @@ class _PackageScreenState extends State<PackageScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Lihat portofolio admin, pilih kategori, lalu booking paket foto yang cocok.',
+                    'Pilih kategori paket foto sesuai kebutuhanmu.',
                     style: TextStyle(color: AppColors.grey, height: 1.5),
                   ),
                   const SizedBox(height: 22),
@@ -166,7 +191,6 @@ class _PackageScreenState extends State<PackageScreen> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 20),
                 ],
               ),
       ),
@@ -267,7 +291,7 @@ class _PhotoPackageCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${package.locationTypeLabel} - ${package.durationMinutes} menit - ${package.photoCount} foto edit',
+                    '${package.locationTypeLabel} • ${package.durationMinutes} menit • ${package.photoCount} foto edit',
                     style: const TextStyle(color: AppColors.grey),
                   ),
                   if (package.description.isNotEmpty) ...[
@@ -449,7 +473,7 @@ class _PrintPriceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Cetak: ${formatCurrency(item.basePrice)} - Bingkai: ${formatCurrency(item.framePrice)}',
+                    'Cetak: ${formatCurrency(item.basePrice)} • Bingkai: ${formatCurrency(item.framePrice)}',
                     style: const TextStyle(color: AppColors.grey, fontSize: 12),
                   ),
                   const SizedBox(height: 5),
