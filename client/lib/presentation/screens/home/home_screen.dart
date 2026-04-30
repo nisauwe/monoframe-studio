@@ -259,7 +259,6 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 26),
           const _SectionTitle(title: 'Paket Populer'),
           const SizedBox(height: 12),
-
           if (packageProvider.isLoading && activePackages.isEmpty)
             const SizedBox(
               height: 236,
@@ -285,34 +284,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
 
-        const SizedBox(height: 28),
-
-        const _SectionTitle(title: 'Galeri Studio'),
-
-        const SizedBox(height: 12),
-
-        if (packageProvider.isLoading && activePackages.isEmpty)
-          const SizedBox(
-            height: 180,
-            child: Center(
-              child: CircularProgressIndicator(
-                color: AppColors.welcomeBlueDark,
-              ),
-            ),
-          )
-        else if (portfolioPackages.isEmpty)
-          const _EmptyCard(
-            icon: Icons.photo_library_outlined,
-            title: 'Portofolio belum tersedia',
-            subtitle:
-                'Gambar portofolio akan muncul setelah admin mengisi foto paket.',
-          )
-        else
-          _PortfolioGrid(
-            packages: portfolioPackages.take(4).toList(),
-            onDetail: _openPackageDetail,
-          ),
-
         if (setting.clientHome.showClientReviews) ...[
           const SizedBox(height: 28),
           FutureBuilder<List<PublicReviewModel>>(
@@ -324,18 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return const _ReviewLoadingCard();
               }
 
-              if (reviews.isEmpty) {
-                return const SizedBox.shrink();
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _SectionTitle(title: 'Review Klien'),
-                  const SizedBox(height: 12),
-                  _ReviewList(reviews: reviews.take(5).toList()),
-                ],
-              );
+              return _PublicReviewSection(reviews: reviews);
             },
           ),
         ],
@@ -1254,247 +1214,374 @@ class _PackageImageFallback extends StatelessWidget {
   }
 }
 
-class _PortfolioGrid extends StatelessWidget {
-  final List<PackageModel> packages;
-  final ValueChanged<PackageModel> onDetail;
+class _PublicReviewSection extends StatelessWidget {
+  final List<PublicReviewModel> reviews;
 
-  const _PortfolioGrid({required this.packages, required this.onDetail});
+  const _PublicReviewSection({required this.reviews});
+
+  double _averageRating() {
+    if (reviews.isEmpty) return 0;
+
+    final total = reviews.fold<int>(
+      0,
+      (sum, item) => sum + item.rating.clamp(0, 5).toInt(),
+    );
+
+    return total / reviews.length;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      itemCount: packages.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.86,
-      ),
-      itemBuilder: (context, index) {
-        final item = packages[index];
+    final average = _averageRating();
+    final averageText = reviews.isEmpty ? '0.0' : average.toStringAsFixed(1);
 
-        return _PortfolioCard(item: item, onTap: () => onDetail(item));
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionTitle(title: 'Review Klien'),
+
+        const SizedBox(height: 12),
+
+        _ReviewSummaryCard(
+          totalReview: reviews.length,
+          averageRatingText: averageText,
+        ),
+
+        const SizedBox(height: 12),
+
+        if (reviews.isEmpty)
+          const _EmptyCard(
+            icon: Icons.rate_review_outlined,
+            title: 'Belum ada review yang tampil',
+            subtitle:
+                'Review akan muncul jika sudah ada ulasan klien yang lolos pengaturan review publik.',
+          )
+        else
+          Column(
+            children: reviews.map((item) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _PublicReviewCard(item: item),
+              );
+            }).toList(),
+          ),
+      ],
     );
   }
 }
 
-class _PortfolioCard extends StatelessWidget {
-  final PackageModel item;
-  final VoidCallback onTap;
+class _ReviewSummaryCard extends StatelessWidget {
+  final int totalReview;
+  final String averageRatingText;
 
-  const _PortfolioCard({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = item.coverImage.isNotEmpty
-        ? item.coverImage
-        : item.portfolio.isNotEmpty
-        ? item.portfolio.first
-        : '';
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(26),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.primarySoft,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.welcomeBlueDark.withOpacity(0.10),
-              blurRadius: 20,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (imageUrl.isNotEmpty)
-              Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const _PackageImageFallback(),
-              )
-            else
-              const _PackageImageFallback(),
-
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    AppColors.welcomeBlueDark.withOpacity(0.16),
-                    AppColors.welcomeBlueDark.withOpacity(0.78),
-                  ],
-                ),
-              ),
-            ),
-
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SmallGlassChip(text: item.categoryName),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      height: 1.18,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SmallGlassChip extends StatelessWidget {
-  final String text;
-
-  const _SmallGlassChip({required this.text});
+  const _ReviewSummaryCard({
+    required this.totalReview,
+    required this.averageRatingText,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 130),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.20),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
+        gradient: AppColors.welcomeDarkGradient,
+        borderRadius: BorderRadius.circular(26),
       ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10.5,
-          fontWeight: FontWeight.w900,
-        ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(
+            right: -30,
+            top: -36,
+            child: Container(
+              width: 116,
+              height: 116,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.10),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 34,
+            bottom: -50,
+            child: Container(
+              width: 104,
+              height: 104,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.07),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(19),
+                  border: Border.all(color: Colors.white.withOpacity(0.20)),
+                ),
+                child: const Icon(
+                  Icons.reviews_rounded,
+                  color: Colors.white,
+                  size: 29,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Apa kata klien?',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      totalReview == 0
+                          ? 'Belum ada review publik yang tampil.'
+                          : '$totalReview review dari klien Monoframe Studio.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.74),
+                        fontSize: 12.4,
+                        height: 1.35,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ReviewHeroPill(
+                            icon: Icons.star_rounded,
+                            text: '$averageRatingText rating',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _ReviewHeroPill(
+                            icon: Icons.public_rounded,
+                            text: 'Review publik',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ReviewList extends StatelessWidget {
-  final List<PublicReviewModel> reviews;
+class _ReviewHeroPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
 
-  const _ReviewList({required this.reviews});
+  const _ReviewHeroPill({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 138,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: reviews.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = reviews[index];
-          final rating = item.rating.clamp(0, 5).toInt();
-
-          return Container(
-            width: 266,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: AppColors.welcomeCardGradient,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.72)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.welcomeBlueDark.withOpacity(0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 15),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: List.generate(
-                    rating,
-                    (_) => const Icon(
-                      Icons.star_rounded,
-                      color: AppColors.warning,
-                      size: 16,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PublicReviewCard extends StatelessWidget {
+  final PublicReviewModel item;
+
+  const _PublicReviewCard({required this.item});
+
+  String _initial() {
+    final name = item.clientName.trim();
+
+    if (name.isEmpty) return 'K';
+
+    return name[0].toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = item.rating.clamp(0, 5).toInt();
+    final clientName = item.clientName.trim().isEmpty
+        ? 'Klien Monoframe'
+        : item.clientName.trim();
+
+    final comment = item.comment.trim().isEmpty
+        ? 'Klien belum menulis komentar.'
+        : item.comment.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: AppColors.welcomeCardGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.72)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: AppColors.welcomeBlueDark,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _initial(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  item.comment,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.welcomeBlueDark,
-                    height: 1.35,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Row(
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(
+                    Text(
+                      clientName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         color: AppColors.welcomeBlueDark,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          item.clientName.trim().isEmpty
-                              ? 'K'
-                              : item.clientName.trim()[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item.clientName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.welcomeBlueDark,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Klien Monoframe Studio',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.welcomeBlueDark.withOpacity(0.58),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.62),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withOpacity(0.78)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppColors.warning,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$rating/5',
+                      style: TextStyle(
+                        color: AppColors.welcomeBlueDark.withOpacity(0.70),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          _ReviewStars(rating: rating),
+
+          const SizedBox(height: 10),
+
+          Text(
+            comment,
+            style: TextStyle(
+              color: AppColors.welcomeBlueDark.withOpacity(0.76),
+              height: 1.45,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
             ),
-          );
-        },
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ReviewStars extends StatelessWidget {
+  final int rating;
+
+  const _ReviewStars({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(5, (index) {
+        final active = index < rating;
+
+        return Icon(
+          active ? Icons.star_rounded : Icons.star_border_rounded,
+          color: active
+              ? AppColors.warning
+              : AppColors.welcomeBlueDark.withOpacity(0.28),
+          size: 18,
+        );
+      }),
     );
   }
 }
@@ -1504,17 +1591,24 @@ class _ReviewLoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 110,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: AppColors.welcomeCardGradient,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.72)),
-      ),
-      child: const Center(
-        child: CircularProgressIndicator(color: AppColors.welcomeBlueDark),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionTitle(title: 'Review Klien'),
+        const SizedBox(height: 12),
+        Container(
+          height: 132,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: AppColors.welcomeCardGradient,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.72)),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(color: AppColors.welcomeBlueDark),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1650,13 +1744,6 @@ class _EmptyCard extends StatelessWidget {
         gradient: AppColors.welcomeCardGradient,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.72)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.welcomeBlueDark.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Column(
         children: [

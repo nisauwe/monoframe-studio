@@ -29,13 +29,15 @@ class AppSettingController extends Controller
             ]);
         }
 
-        $minimumRating = (int) $setting->minimum_rating_display;
-
-        $reviews = Review::query()
+        $query = Review::query()
             ->with(['client', 'booking.package'])
-            ->where('rating', '>=', $minimumRating)
-            ->latest()
-            ->limit(10)
+            ->latest();
+
+        if ($setting->auto_hide_low_rating) {
+            $query->where('rating', '>=', (int) $setting->minimum_rating_display);
+        }
+
+        $reviews = $query
             ->get()
             ->map(function (Review $review) {
                 return [

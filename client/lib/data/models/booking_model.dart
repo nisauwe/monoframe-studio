@@ -39,6 +39,18 @@ class BookingModel {
   final int minimumDpAmount;
   final int remainingBookingAmount;
 
+  final Map<String, dynamic>? currentStage;
+  final String currentStageKey;
+  final String currentStageName;
+  final String currentStageStatus;
+  final String currentStageDescription;
+
+  final bool hasPhotoLink;
+  final String? editRequestStatus;
+  final String? printOrderStatus;
+  final bool hasReview;
+  final List<dynamic> timeline;
+
   BookingModel({
     required this.id,
     required this.packageId,
@@ -71,6 +83,16 @@ class BookingModel {
     required this.totalBookingAmount,
     required this.minimumDpAmount,
     required this.remainingBookingAmount,
+    required this.currentStage,
+    required this.currentStageKey,
+    required this.currentStageName,
+    required this.currentStageStatus,
+    required this.currentStageDescription,
+    required this.hasPhotoLink,
+    required this.editRequestStatus,
+    required this.printOrderStatus,
+    required this.hasReview,
+    required this.timeline,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -108,6 +130,14 @@ class BookingModel {
         : inferredPackagePrice > 0
         ? inferredPackagePrice
         : packageOriginalFromJson;
+
+    final currentStageJson = json['current_stage'] is Map
+        ? Map<String, dynamic>.from(json['current_stage'])
+        : null;
+
+    final timelineJson = json['timeline'] is List
+        ? json['timeline'] as List<dynamic>
+        : <dynamic>[];
 
     return BookingModel(
       id: _toInt(json['id']),
@@ -166,6 +196,19 @@ class BookingModel {
       totalBookingAmount: totalBookingAmount,
       minimumDpAmount: _toInt(json['minimum_dp_amount']),
       remainingBookingAmount: _toInt(json['remaining_booking_amount']),
+
+      currentStage: currentStageJson,
+      currentStageKey: currentStageJson?['stage_key']?.toString() ?? '',
+      currentStageName: currentStageJson?['stage_name']?.toString() ?? '',
+      currentStageStatus: currentStageJson?['status']?.toString() ?? '',
+      currentStageDescription:
+          currentStageJson?['description']?.toString() ?? '',
+
+      hasPhotoLink: _toBool(json['has_photo_link']),
+      editRequestStatus: json['edit_request_status']?.toString(),
+      printOrderStatus: json['print_order_status']?.toString(),
+      hasReview: _toBool(json['has_review']),
+      timeline: timelineJson,
     );
   }
 

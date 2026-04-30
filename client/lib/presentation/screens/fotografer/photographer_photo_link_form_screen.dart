@@ -595,9 +595,51 @@ class _BookingSnapshotCard extends StatelessWidget {
     required this.hasPhotoLink,
   });
 
+  Color _statusColor(String value) {
+    final text = value.toLowerCase();
+
+    if (text.contains('selesai') ||
+        text.contains('done') ||
+        text.contains('completed')) {
+      return AppColors.success;
+    }
+
+    if (text.contains('batal') ||
+        text.contains('cancel') ||
+        text.contains('ditolak')) {
+      return AppColors.danger;
+    }
+
+    return AppColors.primaryDark;
+  }
+
+  Color _paymentColor(String value) {
+    final text = value.toLowerCase();
+
+    if (text.contains('lunas') ||
+        text.contains('paid') ||
+        text.contains('sudah bayar')) {
+      return AppColors.success;
+    }
+
+    if (text.contains('dp')) {
+      return AppColors.primaryDark;
+    }
+
+    if (text.contains('belum') ||
+        text.contains('unpaid') ||
+        text.contains('menunggu')) {
+      return AppColors.warning;
+    }
+
+    return AppColors.primaryDark;
+  }
+
   @override
   Widget build(BuildContext context) {
     final photoColor = hasPhotoLink ? AppColors.success : AppColors.warning;
+    final statusColor = _statusColor(statusLabel);
+    final paymentColor = _paymentColor(paymentLabel);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -637,7 +679,7 @@ class _BookingSnapshotCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      clientName,
+                      clientName.trim().isEmpty ? 'Klien' : clientName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -649,7 +691,7 @@ class _BookingSnapshotCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      packageName,
+                      packageName.trim().isEmpty ? '-' : packageName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -659,6 +701,26 @@ class _BookingSnapshotCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Row(
+            children: [
+              Expanded(
+                child: _StatusPaymentPill(
+                  value: paymentLabel,
+                  color: paymentColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StatusPaymentPill(
+                  value: statusLabel,
+                  color: statusColor,
                 ),
               ),
             ],
@@ -708,28 +770,6 @@ class _BookingSnapshotCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: _CompactInfo(
-                  icon: Icons.verified_rounded,
-                  label: 'Status',
-                  value: statusLabel,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _CompactInfo(
-                  icon: Icons.payments_rounded,
-                  label: 'Pembayaran',
-                  value: paymentLabel,
-                ),
-              ),
-            ],
-          ),
-
           const SizedBox(height: 12),
 
           Container(
@@ -767,6 +807,41 @@ class _BookingSnapshotCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusPaymentPill extends StatelessWidget {
+  final String value;
+  final Color color;
+
+  const _StatusPaymentPill({required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final display = value.trim().isEmpty ? '-' : value.trim();
+
+    return Container(
+      height: 42,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.18), width: 1.2),
+      ),
+      child: Text(
+        display,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontSize: 13,
+          height: 1,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }

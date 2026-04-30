@@ -37,6 +37,154 @@ class _TrackingScreenState extends State<TrackingScreen> {
     return Icons.track_changes_rounded;
   }
 
+  String trackingStageLabel(BookingModel booking) {
+    final status = booking.status.toLowerCase().trim();
+
+    if (status == 'cancelled') return 'Dibatalkan';
+    if (status == 'completed') return 'Selesai';
+
+    if (booking.isPaymentFailed) return 'Pembayaran Gagal';
+
+    if (!booking.isPaid) {
+      if (booking.isPaymentPending) return 'Menunggu Pembayaran';
+      return 'Belum Bayar';
+    }
+
+    final currentStageName = booking.currentStageName.trim();
+
+    if (currentStageName.isNotEmpty) {
+      return currentStageName;
+    }
+
+    final currentStage = booking.currentStage;
+
+    if (currentStage != null) {
+      final name = currentStage['stage_name']?.toString().trim();
+
+      if (name != null && name.isNotEmpty) {
+        return name;
+      }
+    }
+
+    final timeline = booking.timeline
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+
+    final current = timeline.where((item) {
+      return item['status']?.toString().toLowerCase() == 'current';
+    }).toList();
+
+    if (current.isNotEmpty) {
+      final name = current.first['stage_name']?.toString().trim();
+
+      if (name != null && name.isNotEmpty) {
+        return name;
+      }
+    }
+
+    if (booking.editRequestStatus != null &&
+        booking.editRequestStatus!.trim().isNotEmpty) {
+      final editStatus = booking.editRequestStatus!.toLowerCase();
+
+      if (editStatus == 'submitted') return 'Menunggu Assign Editor';
+      if (editStatus == 'assigned') return 'Menunggu Dikerjakan Editor';
+      if (editStatus == 'in_progress') return 'Sedang Diedit';
+      if (editStatus == 'completed') return 'Edit Selesai';
+    }
+
+    if (booking.hasPhotoLink) {
+      return 'Upload Edit';
+    }
+
+    final hasPhotographer =
+        booking.photographerUserId != null && booking.photographerUserId != 0;
+
+    if (!hasPhotographer) {
+      return 'Assign Fotografer';
+    }
+
+    return 'Siap Pemotretan';
+  }
+
+  Color trackingStageColor(BookingModel booking) {
+    final label = trackingStageLabel(booking).toLowerCase();
+
+    if (label.contains('selesai') ||
+        label.contains('review') ||
+        label.contains('ulas')) {
+      return AppColors.success;
+    }
+
+    if (label.contains('gagal') || label.contains('dibatalkan')) {
+      return AppColors.danger;
+    }
+
+    if (label.contains('bayar')) {
+      return AppColors.warning;
+    }
+
+    if (label.contains('assign')) {
+      return AppColors.warning;
+    }
+
+    if (label.contains('foto') ||
+        label.contains('pemotretan') ||
+        label.contains('upload')) {
+      return _TrackingPalette.darkBlue;
+    }
+
+    if (label.contains('edit') || label.contains('revisi')) {
+      return _TrackingPalette.lightBlue;
+    }
+
+    if (label.contains('cetak') || label.contains('print')) {
+      return AppColors.warning;
+    }
+
+    return _TrackingPalette.darkBlue;
+  }
+
+  IconData trackingStageIcon(BookingModel booking) {
+    final label = trackingStageLabel(booking).toLowerCase();
+
+    if (label.contains('selesai') ||
+        label.contains('review') ||
+        label.contains('ulas')) {
+      return Icons.check_circle_rounded;
+    }
+
+    if (label.contains('gagal') || label.contains('dibatalkan')) {
+      return Icons.cancel_rounded;
+    }
+
+    if (label.contains('bayar')) {
+      return Icons.payments_rounded;
+    }
+
+    if (label.contains('assign')) {
+      return Icons.assignment_ind_rounded;
+    }
+
+    if (label.contains('foto') || label.contains('pemotretan')) {
+      return Icons.photo_camera_rounded;
+    }
+
+    if (label.contains('upload')) {
+      return Icons.cloud_upload_rounded;
+    }
+
+    if (label.contains('edit') || label.contains('revisi')) {
+      return Icons.auto_fix_high_rounded;
+    }
+
+    if (label.contains('cetak') || label.contains('print')) {
+      return Icons.print_rounded;
+    }
+
+    return Icons.track_changes_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookingProvider = context.watch<BookingProvider>();
@@ -76,14 +224,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 )
               else
                 ...bookingProvider.bookings.map((booking) {
-                  final color = statusColor(booking);
+                  final paymentColor = statusColor(booking);
+                  final stageLabel = trackingStageLabel(booking);
+                  final stageColor = trackingStageColor(booking);
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _TrackingBookingCard(
                       booking: booking,
-                      statusColor: color,
-                      statusIcon: statusIcon(booking),
+                      statusColor: paymentColor,
+                      statusIcon: trackingStageIcon(booking),
+                      trackingStageLabel: stageLabel,
+                      trackingStageColor: stageColor,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -222,12 +374,16 @@ class _TrackingBookingCard extends StatelessWidget {
   final BookingModel booking;
   final Color statusColor;
   final IconData statusIcon;
+  final String trackingStageLabel;
+  final Color trackingStageColor;
   final VoidCallback onTap;
 
   const _TrackingBookingCard({
     required this.booking,
     required this.statusColor,
     required this.statusIcon,
+    required this.trackingStageLabel,
+    required this.trackingStageColor,
     required this.onTap,
   });
 
@@ -269,7 +425,7 @@ class _TrackingBookingCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _StatusIconBox(icon: statusIcon, color: statusColor),
+                  _StatusIconBox(icon: statusIcon, color: trackingStageColor),
                   const SizedBox(width: 11),
                   Expanded(
                     child: Column(
@@ -290,7 +446,7 @@ class _TrackingBookingCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          '$dateText • ${booking.bookingStatusLabel}',
+                          '$dateText • $trackingStageLabel',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -335,8 +491,8 @@ class _TrackingBookingCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _StatusChip(
-                      label: booking.bookingStatusLabel,
-                      color: _TrackingPalette.darkBlue,
+                      label: trackingStageLabel,
+                      color: trackingStageColor,
                     ),
                   ),
                 ],
@@ -410,7 +566,11 @@ class _TrackingBookingCard extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              _ProgressPreview(booking: booking, color: statusColor),
+              _ProgressPreview(
+                booking: booking,
+                color: trackingStageColor,
+                trackingStageLabel: trackingStageLabel,
+              ),
             ],
           ),
         ),
@@ -458,7 +618,7 @@ class _StatusChip extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: Text(
-        label,
+        label.trim().isEmpty ? '-' : label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
@@ -505,7 +665,7 @@ class _CompactInfo extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                value,
+                value.trim().isEmpty ? '-' : value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -526,31 +686,49 @@ class _CompactInfo extends StatelessWidget {
 class _ProgressPreview extends StatelessWidget {
   final BookingModel booking;
   final Color color;
+  final String trackingStageLabel;
 
-  const _ProgressPreview({required this.booking, required this.color});
+  const _ProgressPreview({
+    required this.booking,
+    required this.color,
+    required this.trackingStageLabel,
+  });
+
+  bool _stageContains(String text) {
+    return trackingStageLabel.toLowerCase().contains(text);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hasPaid = booking.isPaid || booking.isPaymentPending;
+    final hasPhotoStage =
+        _stageContains('foto') ||
+        _stageContains('pemotretan') ||
+        _stageContains('selesai');
+    final hasEditStage = _stageContains('edit') || _stageContains('selesai');
+    final hasReviewStage =
+        _stageContains('review') || _stageContains('selesai');
+
     final steps = [
       _ProgressStep(
         icon: Icons.payments_rounded,
         label: 'Bayar',
-        active: booking.isPaid || booking.isPaymentPending,
+        active: hasPaid,
       ),
       _ProgressStep(
         icon: Icons.camera_alt_rounded,
         label: 'Foto',
-        active: booking.isPaid,
+        active: hasPhotoStage,
       ),
       _ProgressStep(
         icon: Icons.brush_rounded,
         label: 'Edit',
-        active: booking.bookingStatusLabel.toLowerCase().contains('selesai'),
+        active: hasEditStage,
       ),
       _ProgressStep(
         icon: Icons.rate_review_rounded,
         label: 'Review',
-        active: booking.bookingStatusLabel.toLowerCase().contains('selesai'),
+        active: hasReviewStage,
       ),
     ];
 

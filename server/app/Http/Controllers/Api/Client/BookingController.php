@@ -8,6 +8,7 @@ use App\Models\BookingAddonSetting;
 use App\Models\Package;
 use App\Models\ScheduleBooking;
 use App\Models\BookingCancelLog;
+use App\Services\BookingTrackingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -15,17 +16,55 @@ use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, BookingTrackingService $trackingService)
     {
-        $bookings = ScheduleBooking::with(['package', 'latestPayment', 'payments', 'moodboards'])
+        $bookings = ScheduleBooking::with([
+                'package',
+                'latestPayment',
+                'payments',
+                'moodboards',
+                'photographerUser',
+                'photoLink',
+                'editRequest',
+                'printOrder',
+                'review',
+                'trackings',
+            ])
             ->where('client_user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->get();
 
         return response()->json([
             'message' => 'Daftar booking berhasil diambil',
-            'data' => $bookings->map(function ($booking) {
+            'data' => $bookings->map(function ($booking) use ($trackingService) {
+                $trackingService->syncTrackingState($booking);
+
+                $booking->refresh();
+
+                $booking->load([
+                    'package',
+                    'latestPayment',
+                    'payments',
+                    'moodboards',
+                    'photographerUser',
+                    'photoLink',
+                    'editRequest',
+                    'printOrder',
+                    'review',
+                    'trackings',
+                ]);
+
                 $latestPayment = $booking->latestPayment;
+
+                $timeline = $booking->trackings
+                    ->sortBy('stage_order')
+                    ->values();
+
+                $currentStage = $timeline->firstWhere('status', 'current');
+
+                if (!$currentStage) {
+                    $currentStage = $timeline->lastWhere('status', 'done');
+                }
 
                 return [
                     'id' => $booking->id,
@@ -73,6 +112,25 @@ class BookingController extends Controller
                     'remaining_booking_amount' => $booking->remaining_booking_amount,
                     'is_dp_paid' => $booking->isDpPaid(),
                     'is_fully_paid' => $booking->isFullyPaid(),
+
+                    'has_photo_link' => (bool) $booking->photoLink,
+                    'edit_request_status' => $booking->editRequest?->status,
+                    'print_order_status' => $booking->printOrder?->status,
+                    'has_review' => (bool) $booking->review,
+
+                    'current_stage' => $currentStage ? [
+                        'stage_key' => $currentStage->stage_key,
+                        'stage_name' => $currentStage->stage_name,
+                        'status' => $currentStage->status,
+                        'description' => $currentStage->description,
+                    ] : [
+                        'stage_key' => 'assign_photographer',
+                        'stage_name' => 'Assign Fotografer',
+                        'status' => 'current',
+                        'description' => 'Booking menunggu proses Front Office',
+                    ],
+
+                    'timeline' => $timeline,
                 ];
             })->values(),
         ]);
