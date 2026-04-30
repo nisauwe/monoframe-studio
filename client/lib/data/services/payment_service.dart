@@ -53,4 +53,32 @@ class PaymentService {
       throw Exception('Gagal cek status pembayaran');
     }
   }
+
+  Future<Map<String, dynamic>> cancelBookingBeforePayment({
+    required int bookingId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dio.delete(
+        '/bookings/$bookingId',
+        data: {
+          'reason': reason?.trim().isEmpty == true ? null : reason?.trim(),
+        },
+      );
+
+      if (response.data is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(response.data);
+      }
+
+      throw Exception('Response cancel booking tidak valid');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+
+      if (data is Map<String, dynamic> && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+
+      throw Exception('Gagal membatalkan booking');
+    }
+  }
 }

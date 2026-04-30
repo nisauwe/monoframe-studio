@@ -51,14 +51,25 @@ class _PackageScreenState extends State<PackageScreen> {
     ).format(value);
   }
 
+  String formatCompactCurrency(double value) {
+    return NumberFormat.compactCurrency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    ).format(value);
+  }
+
   List<String> _categories(List<PackageModel> packages) {
     final categories =
         packages.map((item) => item.categoryName).toSet().toList()..sort();
+
     return ['Semua', ...categories];
   }
 
   List<PackageModel> _filtered(List<PackageModel> packages) {
-    if (selectedCategory == 'Semua') return packages;
+    if (selectedCategory == 'Semua') {
+      return packages;
+    }
 
     return packages
         .where((item) => item.categoryName == selectedCategory)
@@ -76,123 +87,222 @@ class _PackageScreenState extends State<PackageScreen> {
     }
 
     return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: provider.refreshAll,
-        child:
-            provider.isLoading &&
-                provider.packages.isEmpty &&
-                provider.printPrices.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 118),
-                children: [
-                  const Text(
-                    'Paket Layanan',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+      child: Container(
+        color: AppColors.background,
+        child: RefreshIndicator(
+          color: _PackageListPalette.darkBlue,
+          backgroundColor: _PackageListPalette.cardLight,
+          onRefresh: provider.refreshAll,
+          child:
+              provider.isLoading &&
+                  provider.packages.isEmpty &&
+                  provider.printPrices.isEmpty
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: _PackageListPalette.darkBlue,
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Pilih kategori paket foto sesuai kebutuhanmu.',
-                    style: TextStyle(color: AppColors.grey, height: 1.5),
-                  ),
-                  const SizedBox(height: 22),
-                  SizedBox(
-                    height: 46,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final category = categories[index];
-                        final selected = category == selectedCategory;
-                        final count = category == 'Semua'
-                            ? provider.packages.length
-                            : provider.packages
-                                  .where(
-                                    (item) => item.categoryName == category,
-                                  )
-                                  .length;
-
-                        return ChoiceChip(
-                          selected: selected,
-                          showCheckmark: false,
-                          label: Text('$category ($count)'),
-                          labelStyle: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : AppColors.primaryDark,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          selectedColor: AppColors.primaryDark,
-                          backgroundColor: Colors.white,
-                          side: BorderSide(
-                            color: selected
-                                ? AppColors.primaryDark
-                                : AppColors.border,
-                          ),
-                          onSelected: (_) {
-                            setState(() => selectedCategory = category);
-                          },
-                        );
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 118),
+                  children: [
+                    const Text(
+                      'Paket Layanan',
+                      style: TextStyle(
+                        color: _PackageListPalette.darkBlue,
+                        fontSize: 24,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Pilih paket foto sesuai kebutuhanmu.',
+                      style: TextStyle(
+                        color: _PackageListPalette.darkBlue.withValues(
+                          alpha: 0.62,
+                        ),
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _CategoryTabs(
+                      categories: categories,
+                      selectedCategory: selectedCategory,
+                      packages: provider.packages,
+                      onSelected: (category) {
+                        setState(() => selectedCategory = category);
                       },
                     ),
-                  ),
-                  const SizedBox(height: 22),
-                  if (packages.isEmpty)
-                    const _EmptyPackageList()
-                  else
-                    ...packages.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _PhotoPackageCard(
-                          package: item,
-                          formatCurrency: formatCurrency,
-                          onDetail: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    PackageDetailScreen(packageId: item.id),
-                              ),
-                            );
-                          },
-                          onBooking: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    BookingScreen(selectedPackage: item),
-                              ),
-                            );
-                          },
+                    const SizedBox(height: 18),
+                    if (packages.isEmpty)
+                      const _EmptyPackageList()
+                    else
+                      ...packages.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _PhotoPackageCard(
+                            package: item,
+                            formatCompactCurrency: formatCompactCurrency,
+                            onDetail: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      PackageDetailScreen(packageId: item.id),
+                                ),
+                              );
+                            },
+                            onBooking: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      BookingScreen(selectedPackage: item),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Paket Cetak & Bingkai',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Harga tambahan untuk kebutuhan cetak foto.',
-                    style: TextStyle(color: AppColors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  if (provider.printPrices.isEmpty)
-                    const _EmptyPrintList()
-                  else
-                    ...provider.printPrices.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _PrintPriceCard(
-                          item: item,
-                          formatCurrency: formatCurrency,
-                        ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Paket Cetak & Bingkai',
+                      style: TextStyle(
+                        color: _PackageListPalette.darkBlue,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'Harga tambahan untuk kebutuhan cetak foto.',
+                      style: TextStyle(
+                        color: _PackageListPalette.darkBlue.withValues(
+                          alpha: 0.58,
+                        ),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (provider.printPrices.isEmpty)
+                      const _EmptyPrintList()
+                    else
+                      ...provider.printPrices.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _PrintPriceCard(
+                            item: item,
+                            formatCurrency: formatCurrency,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PackageListPalette {
+  static const Color darkBlue = Color(0xFF233B93);
+  static const Color midBlue = Color(0xFF344FA5);
+  static const Color lightBlue = Color(0xFF5E7BDA);
+
+  static const Color cardLight = Color(0xFFF0FAFF);
+  static const Color cardMid = Color(0xFFD9F0FA);
+  static const Color cardDeep = Color(0xFFC5E4F2);
+
+  static const LinearGradient darkGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkBlue, midBlue, lightBlue],
+  );
+
+  static const LinearGradient softGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [cardLight, cardMid, cardDeep],
+  );
+}
+
+class _CategoryTabs extends StatelessWidget {
+  final List<String> categories;
+  final String selectedCategory;
+  final List<PackageModel> packages;
+  final ValueChanged<String> onSelected;
+
+  const _CategoryTabs({
+    required this.categories,
+    required this.selectedCategory,
+    required this.packages,
+    required this.onSelected,
+  });
+
+  int _countForCategory(String category) {
+    if (category == 'Semua') {
+      return packages.length;
+    }
+
+    return packages.where((item) => item.categoryName == category).length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 9),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final selected = category == selectedCategory;
+          final count = _countForCategory(category);
+
+          return InkWell(
+            onTap: () => onSelected(category),
+            borderRadius: BorderRadius.circular(999),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              decoration: BoxDecoration(
+                gradient: selected ? _PackageListPalette.darkGradient : null,
+                color: selected ? null : Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: selected
+                      ? _PackageListPalette.lightBlue.withValues(alpha: 0.60)
+                      : _PackageListPalette.cardDeep,
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: _PackageListPalette.darkBlue.withValues(
+                            alpha: 0.14,
+                          ),
+                          blurRadius: 14,
+                          offset: const Offset(0, 7),
+                        ),
+                      ]
+                    : [],
               ),
+              alignment: Alignment.center,
+              child: Text(
+                '$category ($count)',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.white : _PackageListPalette.darkBlue,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -200,13 +310,13 @@ class _PackageScreenState extends State<PackageScreen> {
 
 class _PhotoPackageCard extends StatelessWidget {
   final PackageModel package;
-  final String Function(double) formatCurrency;
+  final String Function(double) formatCompactCurrency;
   final VoidCallback onDetail;
   final VoidCallback onBooking;
 
   const _PhotoPackageCard({
     required this.package,
-    required this.formatCurrency,
+    required this.formatCompactCurrency,
     required this.onDetail,
     required this.onBooking,
   });
@@ -215,140 +325,36 @@ class _PhotoPackageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onDetail,
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
+        height: 152,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: _PackageListPalette.cardDeep),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryDark.withOpacity(0.05),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              color: _PackageListPalette.darkBlue.withValues(alpha: 0.055),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: Row(
           children: [
-            _PortfolioPreview(package: package),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          package.categoryName,
-                          style: const TextStyle(
-                            color: AppColors.primaryDark,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      if (package.hasDiscount)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            '${package.activeDiscount?.discountPercent ?? 0}% OFF',
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    package.name,
-                    style: const TextStyle(
-                      color: AppColors.dark,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${package.locationTypeLabel} • ${package.durationMinutes} menit • ${package.photoCount} foto edit',
-                    style: const TextStyle(color: AppColors.grey),
-                  ),
-                  if (package.description.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      package.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(height: 1.5),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (package.hasDiscount)
-                              Text(
-                                formatCurrency(package.price),
-                                style: const TextStyle(
-                                  color: AppColors.grey,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                            Text(
-                              formatCurrency(package.finalPrice),
-                              style: const TextStyle(
-                                color: AppColors.primaryDark,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: onDetail,
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.primarySoft,
-                          foregroundColor: AppColors.primaryDark,
-                        ),
-                        icon: const Icon(Icons.visibility_outlined),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: onBooking,
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.primaryDark,
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.calendar_month_rounded),
-                      ),
-                    ],
-                  ),
-                ],
+            _PackageImageSide(
+              package: package,
+              priceText: formatCompactCurrency(package.finalPrice),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: _PackageCardContent(
+                  package: package,
+                  onDetail: onDetail,
+                  onBooking: onBooking,
+                ),
               ),
             ),
           ],
@@ -358,76 +364,343 @@ class _PhotoPackageCard extends StatelessWidget {
   }
 }
 
-class _PortfolioPreview extends StatelessWidget {
+class _PackageCardContent extends StatelessWidget {
   final PackageModel package;
+  final VoidCallback onDetail;
+  final VoidCallback onBooking;
 
-  const _PortfolioPreview({required this.package});
+  const _PackageCardContent({
+    required this.package,
+    required this.onDetail,
+    required this.onBooking,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (package.portfolio.isEmpty) {
-      return Container(
-        height: 190,
-        decoration: const BoxDecoration(
-          color: AppColors.primarySoft,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.photo_camera_outlined,
-            color: AppColors.primaryDark,
-            size: 46,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          package.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: _PackageListPalette.darkBlue,
+            fontSize: 18,
+            height: 1.05,
+            fontWeight: FontWeight.w900,
           ),
         ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: SizedBox(
-        height: 205,
-        child: PageView.builder(
-          itemCount: package.portfolio.length,
-          itemBuilder: (context, index) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  package.portfolio[index],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.primarySoft,
-                    child: const Icon(
-                      Icons.broken_image_outlined,
-                      color: AppColors.primaryDark,
+        const SizedBox(height: 3),
+        Text(
+          package.categoryName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _PackageListPalette.darkBlue.withValues(alpha: 0.58),
+            fontSize: 12,
+            height: 1.05,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _PackageMiniInfo(package: package),
+        const Spacer(),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 30,
+                child: OutlinedButton(
+                  onPressed: onDetail,
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    foregroundColor: _PackageListPalette.darkBlue,
+                    side: BorderSide(
+                      color: _PackageListPalette.darkBlue.withValues(
+                        alpha: 0.22,
+                      ),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
+                  child: const Text('Lihat Paket'),
                 ),
-                Positioned(
-                  right: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: SizedBox(
+                height: 30,
+                child: ElevatedButton(
+                  onPressed: onBooking,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                    backgroundColor: _PackageListPalette.darkBlue,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(11),
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.45),
-                      borderRadius: BorderRadius.circular(999),
+                    textStyle: const TextStyle(
+                      fontSize: 10.8,
+                      fontWeight: FontWeight.w900,
                     ),
-                    child: Text(
-                      '${index + 1}/${package.portfolio.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
+                  ),
+                  child: const Text('Booking'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PackageMiniInfo extends StatelessWidget {
+  final PackageModel package;
+
+  const _PackageMiniInfo({required this.package});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
+      decoration: BoxDecoration(
+        gradient: _PackageListPalette.softGradient,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.76)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _MiniInfoRow(
+            icon: Icons.schedule_rounded,
+            text: '${package.durationMinutes} menit',
+          ),
+          const SizedBox(height: 5),
+          _MiniInfoRow(
+            icon: Icons.location_on_rounded,
+            text: package.locationTypeLabel,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _MiniInfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: _PackageListPalette.darkBlue, size: 14),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _PackageListPalette.darkBlue,
+              fontSize: 11,
+              height: 1,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PackageImageSide extends StatelessWidget {
+  final PackageModel package;
+  final String priceText;
+
+  const _PackageImageSide({required this.package, required this.priceText});
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = package.coverImage.isNotEmpty
+        ? package.coverImage
+        : package.portfolio.isNotEmpty
+        ? package.portfolio.first
+        : '';
+
+    return SizedBox(
+      width: 122,
+      height: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: _PackageListPalette.softGradient,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _PackageListPalette.darkBlue.withValues(alpha: 0.18),
+              width: 1.6,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _PackageListPalette.darkBlue.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return const _PackageImageFallback();
+                          },
+                        )
+                      : const _PackageImageFallback(),
+                ),
+              ),
+
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.06),
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.20),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ],
-            );
-          },
+              ),
+
+              Positioned(
+                top: 10,
+                left: 10,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _PackageListPalette.darkBlue.withValues(
+                          alpha: 0.10,
+                        ),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    priceText,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _PackageListPalette.darkBlue,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+
+              if (package.hasDiscount)
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.warning.withValues(alpha: 0.22),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '${package.activeDiscount?.discountPercent ?? 0}% OFF',
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PackageImageFallback extends StatelessWidget {
+  const _PackageImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: _PackageListPalette.softGradient,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.photo_camera_outlined,
+          color: _PackageListPalette.darkBlue.withValues(alpha: 0.42),
+          size: 30,
         ),
       ),
     );
@@ -442,53 +715,74 @@ class _PrintPriceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.print_outlined,
-                color: AppColors.primaryDark,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _PackageListPalette.cardDeep),
+        boxShadow: [
+          BoxShadow(
+            color: _PackageListPalette.darkBlue.withValues(alpha: 0.045),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              gradient: _PackageListPalette.softGradient,
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.sizeLabel,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Cetak: ${formatCurrency(item.basePrice)} • Bingkai: ${formatCurrency(item.framePrice)}',
-                    style: const TextStyle(color: AppColors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    formatCurrency(item.totalWithFrame),
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
+            child: const Icon(
+              Icons.print_outlined,
+              color: _PackageListPalette.darkBlue,
+              size: 23,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.sizeLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _PackageListPalette.darkBlue,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Cetak: ${formatCurrency(item.basePrice)} • Bingkai: ${formatCurrency(item.framePrice)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _PackageListPalette.darkBlue.withValues(alpha: 0.58),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formatCurrency(item.totalWithFrame),
+                  style: const TextStyle(
+                    color: _PackageListPalette.darkBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -537,20 +831,30 @@ class _EmptyState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        gradient: _PackageListPalette.softGradient,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.76)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.primaryDark, size: 42),
+          Icon(icon, color: _PackageListPalette.darkBlue, size: 42),
           const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: _PackageListPalette.darkBlue,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 5),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.grey, height: 1.5),
+            style: TextStyle(
+              color: _PackageListPalette.darkBlue.withValues(alpha: 0.62),
+              height: 1.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

@@ -105,6 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
         */
 
         Route::get('/bookings', [BookingController::class, 'index']);
+        Route::delete('/bookings/{booking}', [BookingController::class, 'destroy']);
         Route::get('/bookings/{booking}', [BookingController::class, 'show']);
         Route::post('/bookings', [BookingController::class, 'store']);
 
@@ -124,6 +125,7 @@ Route::middleware('auth:sanctum')->group(function () {
         */
 
         Route::get('/booking-addon-settings', [BookingAddonSettingController::class, 'index']);
+
 
         /*
         |--------------------------------------------------------------------------

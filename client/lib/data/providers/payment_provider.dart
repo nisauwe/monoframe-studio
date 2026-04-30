@@ -8,11 +8,13 @@ class PaymentProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   bool _isCheckingStatus = false;
+  bool _isCancellingBooking = false;
   String? _errorMessage;
   PaymentSnapModel? _snap;
 
   bool get isLoading => _isLoading;
   bool get isCheckingStatus => _isCheckingStatus;
+  bool get isCancellingBooking => _isCancellingBooking;
   String? get errorMessage => _errorMessage;
   PaymentSnapModel? get snap => _snap;
 
@@ -22,6 +24,7 @@ class PaymentProvider extends ChangeNotifier {
   }) async {
     _isLoading = true;
     _isCheckingStatus = false;
+    _isCancellingBooking = false;
     _errorMessage = null;
     _snap = null;
     notifyListeners();
@@ -43,6 +46,8 @@ class PaymentProvider extends ChangeNotifier {
 
   Future<bool> checkPaymentStatus({required int bookingId}) async {
     _isCheckingStatus = true;
+    _isLoading = false;
+    _isCancellingBooking = false;
     _errorMessage = null;
     notifyListeners();
 
@@ -54,6 +59,31 @@ class PaymentProvider extends ChangeNotifier {
       return false;
     } finally {
       _isCheckingStatus = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> cancelBookingBeforePayment({
+    required int bookingId,
+    String? reason,
+  }) async {
+    _isCancellingBooking = true;
+    _isLoading = false;
+    _isCheckingStatus = false;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.cancelBookingBeforePayment(
+        bookingId: bookingId,
+        reason: reason,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      _isCancellingBooking = false;
       notifyListeners();
     }
   }

@@ -7,9 +7,11 @@ use App\Models\AppSetting;
 use App\Models\BookingAddonSetting;
 use App\Models\Package;
 use App\Models\ScheduleBooking;
+use App\Models\BookingCancelLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
@@ -208,6 +210,83 @@ class BookingController extends Controller
               'next_action' => 'payment',
           ]
       ], 201);
+    }
+
+    public function destroy(Request $request, ScheduleBooking $booking)
+    {
+        if ($booking->client_user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Akses ditolak'
+            ], 403);
+        }
+
+        $booking->load(['package', 'payments', 'moodboards', 'trackings']);
+
+        if ($booking->isDpPaid() || $booking->isFullyPaid()) {
+            return response()->json([
+                'message' => 'Booking tidak bisa dicancel karena pembayaran DP atau lunas sudah masuk.',
+            ], 422);
+        }
+
+        $hasSuccessfulPayment = $booking->payments()
+            ->whereIn('transaction_status', ['settlement', 'capture'])
+            ->exists();
+
+        if ($hasSuccessfulPayment) {
+            return response()->json([
+                'message' => 'Booking tidak bisa dicancel karena pembayaran sudah berhasil.',
+            ], 422);
+        }
+
+        $reason = trim((string) $request->input('reason', ''));
+
+        DB::transaction(function () use ($booking, $request, $reason) {
+            BookingCancelLog::create([
+                'client_user_id' => $booking->client_user_id,
+                'schedule_booking_id' => $booking->id,
+                'package_id' => $booking->package_id,
+                'package_name' => $booking->package?->name,
+                'client_name' => $booking->client_name,
+                'client_phone' => $booking->client_phone,
+                'booking_date' => $booking->booking_date,
+                'start_time' => $booking->start_time,
+                'end_time' => $booking->end_time,
+                'location_type' => $booking->location_type,
+                'location_name' => $booking->location_name,
+                'duration_minutes' => (int) $booking->duration_minutes,
+                'extra_duration_minutes' => (int) $booking->extra_duration_minutes,
+                'extra_duration_fee' => (int) $booking->extra_duration_fee,
+                'video_addon_name' => $booking->video_addon_name,
+                'video_addon_price' => (int) $booking->video_addon_price,
+                'total_booking_amount' => (int) $booking->total_booking_amount,
+                'notes' => $booking->notes,
+                'cancel_reason' => $reason !== '' ? $reason : null,
+                'snapshot' => [
+                    'booking' => $booking->toArray(),
+                    'package' => $booking->package?->toArray(),
+                    'payments' => $booking->payments->toArray(),
+                    'moodboards' => $booking->moodboards->toArray(),
+                    'trackings' => $booking->trackings->toArray(),
+                    'cancelled_by' => [
+                        'id' => $request->user()->id,
+                        'name' => $request->user()->name,
+                        'email' => $request->user()->email,
+                        'role' => $request->user()->role,
+                    ],
+                ],
+                'cancelled_at' => now(),
+            ]);
+
+            $booking->payments()
+                ->whereNotIn('transaction_status', ['settlement', 'capture'])
+                ->delete();
+
+            $booking->delete();
+        });
+
+        return response()->json([
+            'message' => 'Booking berhasil dicancel dan dihapus dari riwayat klien.',
+        ]);
     }
 
     private function resolveChoiceFromScheduleEngine(

@@ -82,6 +82,33 @@ class BookingModel {
         ? Map<String, dynamic>.from(json['latest_payment'])
         : null;
 
+    final extraDurationFee = _toInt(json['extra_duration_fee']);
+    final videoAddonPrice = _toInt(json['video_addon_price']);
+
+    final totalBookingAmount = _toInt(json['total_booking_amount']);
+
+    final inferredPackagePrice =
+        totalBookingAmount - extraDurationFee - videoAddonPrice;
+
+    final packageFinalFromJson = _firstPositiveInt([
+      packageJson['discounted_price'],
+      packageJson['final_price'],
+      packageJson['finalPrice'],
+      packageJson['package_base_price'],
+      json['package_base_price'],
+    ]);
+
+    final packageOriginalFromJson = _firstPositiveInt([
+      packageJson['price'],
+      json['package_price'],
+    ]);
+
+    final resolvedPackagePrice = packageFinalFromJson > 0
+        ? packageFinalFromJson
+        : inferredPackagePrice > 0
+        ? inferredPackagePrice
+        : packageOriginalFromJson;
+
     return BookingModel(
       id: _toInt(json['id']),
       packageId: _toInt(json['package_id']),
@@ -118,21 +145,25 @@ class BookingModel {
       durationMinutes: _toInt(json['duration_minutes']),
       extraDurationUnits: _toInt(json['extra_duration_units']),
       extraDurationMinutes: _toInt(json['extra_duration_minutes']),
-      extraDurationFee: _toInt(json['extra_duration_fee']),
+      extraDurationFee: extraDurationFee,
 
       videoAddonType: json['video_addon_type']?.toString(),
       videoAddonName: json['video_addon_name']?.toString(),
-      videoAddonPrice: _toInt(json['video_addon_price']),
+      videoAddonPrice: videoAddonPrice,
 
-      packageName: packageJson['name']?.toString() ?? 'Paket Foto',
-      packagePrice: _toInt(packageJson['price']),
+      packageName:
+          packageJson['name']?.toString() ??
+          json['package_name']?.toString() ??
+          'Paket Foto',
+
+      packagePrice: resolvedPackagePrice,
 
       latestPayment: latestPaymentJson,
 
       isDpPaid: _toBool(json['is_dp_paid']),
       isFullyPaid: _toBool(json['is_fully_paid']),
 
-      totalBookingAmount: _toInt(json['total_booking_amount']),
+      totalBookingAmount: totalBookingAmount,
       minimumDpAmount: _toInt(json['minimum_dp_amount']),
       remainingBookingAmount: _toInt(json['remaining_booking_amount']),
     );
@@ -231,6 +262,39 @@ class BookingModel {
   int get totalEstimatedAmount {
     if (totalBookingAmount > 0) return totalBookingAmount;
     return packagePrice + extraDurationFee + videoAddonPrice;
+  }
+
+  int get packagePriceForBilling {
+    if (packagePrice > 0) return packagePrice;
+
+    final inferred = totalEstimatedAmount - extraDurationFee - videoAddonPrice;
+
+    if (inferred > 0) {
+      return inferred;
+    }
+
+    return 0;
+  }
+
+  int get dpAmountForBilling {
+    if (minimumDpAmount > 0) return minimumDpAmount;
+    return (totalEstimatedAmount * 0.5).ceil();
+  }
+
+  int get fullAmountForBilling {
+    return totalEstimatedAmount;
+  }
+
+  static int _firstPositiveInt(List<dynamic> values) {
+    for (final value in values) {
+      final parsed = _toInt(value);
+
+      if (parsed > 0) {
+        return parsed;
+      }
+    }
+
+    return 0;
   }
 
   static int _toInt(dynamic value) {

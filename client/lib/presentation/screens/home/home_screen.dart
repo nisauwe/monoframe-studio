@@ -214,11 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 26),
 
-                  _SectionTitle(
-                    title: 'Kategori',
-                    actionText: 'Lihat semua',
-                    onAction: widget.onOpenPackages,
-                  ),
+                  _SectionTitle(title: 'Kategori'),
 
                   const SizedBox(height: 12),
 
@@ -234,11 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 26),
 
-                  _SectionTitle(
-                    title: 'Paket Populer',
-                    actionText: 'Lihat semua',
-                    onAction: widget.onOpenPackages,
-                  ),
+                  _SectionTitle(title: 'Paket Populer'),
 
                   const SizedBox(height: 12),
 
@@ -268,11 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 28),
 
-                  _SectionTitle(
-                    title: 'Portofolio Studio',
-                    actionText: 'Lihat semua',
-                    onAction: widget.onOpenPackages,
-                  ),
+                  _SectionTitle(title: 'Galeri Studio'),
 
                   const SizedBox(height: 12),
 
@@ -352,22 +340,6 @@ class _SearchLikeBox extends StatelessWidget {
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
-          ],
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.search_rounded, color: AppColors.welcomeBlueDark),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Cari paket foto Monoframe',
-                style: TextStyle(
-                  color: AppColors.welcomeBlueDark,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            Icon(Icons.tune_rounded, color: AppColors.welcomeBlueDark),
           ],
         ),
       ),

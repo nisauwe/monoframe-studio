@@ -29,34 +29,42 @@ class ClientHomeHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(32),
         gradient: AppColors.welcomeDarkGradient,
         boxShadow: [
           BoxShadow(
             color: AppColors.welcomeBlueDark.withOpacity(0.24),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
+            blurRadius: 26,
+            offset: const Offset(0, 15),
           ),
         ],
       ),
       child: Stack(
         children: [
           Positioned(
-            top: -54,
-            right: -44,
+            top: -58,
+            right: -46,
             child: _HeaderCircle(
-              size: 150,
+              size: 164,
               color: Colors.white.withOpacity(0.13),
             ),
           ),
           Positioned(
-            bottom: -62,
-            left: -58,
+            bottom: -72,
+            left: -62,
             child: _HeaderCircle(
-              size: 160,
+              size: 176,
               color: Colors.white.withOpacity(0.08),
+            ),
+          ),
+          Positioned(
+            top: 94,
+            right: 28,
+            child: _HeaderCircle(
+              size: 8,
+              color: Colors.white.withOpacity(0.30),
             ),
           ),
           Column(
@@ -64,8 +72,8 @@ class ClientHomeHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const MonoframeLogoMark(size: 48),
-                  const SizedBox(width: 12),
+                  const MonoframeLogoMark(size: 56),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,19 +86,21 @@ class ClientHomeHeader extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 17,
+                            fontSize: 19,
+                            height: 1.12,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 7),
                         Text(
                           'Halo, $clientName',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.82),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                            color: Colors.white.withOpacity(0.84),
+                            fontSize: 13.5,
+                            height: 1.18,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
@@ -104,14 +114,22 @@ class ClientHomeHeader extends StatelessWidget {
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.white.withOpacity(0.16),
                           foregroundColor: Colors.white,
+                          fixedSize: const Size(52, 52),
                         ),
-                        icon: const Icon(Icons.notifications_none_rounded),
+                        icon: const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 29,
+                        ),
                       ),
                       if (unreadNotificationCount > 0)
                         Positioned(
                           right: -2,
                           top: -2,
                           child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 24,
+                              minHeight: 24,
+                            ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
                               vertical: 2,
@@ -121,16 +139,18 @@ class ClientHomeHeader extends StatelessWidget {
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
                                 color: Colors.white,
-                                width: 1.5,
+                                width: 1.7,
                               ),
                             ),
+                            alignment: Alignment.center,
                             child: Text(
                               unreadNotificationCount > 99
                                   ? '99+'
                                   : unreadNotificationCount.toString(),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 11,
+                                height: 1,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -140,33 +160,40 @@ class ClientHomeHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 28),
+
               Text(
                 home.title.isNotEmpty
                     ? home.title
                     : 'Abadikan momen terbaik bersama Monoframe Studio',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
-                  height: 1.16,
+                  fontSize: 24,
+                  height: 1.22,
                   fontWeight: FontWeight.w900,
+                  letterSpacing: -0.2,
                 ),
               ),
-              const SizedBox(height: 8),
+
+              const SizedBox(height: 16),
+
               Text(
                 home.subtitle.isNotEmpty
                     ? home.subtitle
                     : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.',
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.86),
-                  fontSize: 12.8,
-                  height: 1.45,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 14.2,
+                  height: 1.55,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 28),
+
               Row(
                 children: [
                   Expanded(
@@ -176,7 +203,7 @@ class ClientHomeHeader extends StatelessWidget {
                       onTap: onBookingPressed,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: _HeaderActionButton(
                       icon: Icons.support_agent_rounded,
@@ -227,26 +254,26 @@ class _HeaderActionButton extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           color: enabled ? Colors.white : Colors.white.withOpacity(0.45),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: AppColors.welcomeBlueDark.withOpacity(0.12),
-              blurRadius: 14,
-              offset: const Offset(0, 7),
+              color: AppColors.welcomeBlueDark.withOpacity(0.13),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: AppColors.welcomeBlueDark),
-            const SizedBox(width: 8),
+            Icon(icon, size: 23, color: AppColors.welcomeBlueDark),
+            const SizedBox(width: 10),
             Flexible(
               child: Text(
                 label,
@@ -255,7 +282,8 @@ class _HeaderActionButton extends StatelessWidget {
                 style: const TextStyle(
                   color: AppColors.welcomeBlueDark,
                   fontWeight: FontWeight.w900,
-                  fontSize: 12.5,
+                  fontSize: 15,
+                  height: 1,
                 ),
               ),
             ),

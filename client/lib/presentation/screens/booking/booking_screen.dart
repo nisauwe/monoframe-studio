@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import 'booking_history_screen.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -63,12 +64,14 @@ class _BookingScreenState extends State<BookingScreen> {
   bool get isOutdoor {
     final package = widget.selectedPackage;
     if (package == null) return false;
+
     return package.locationType.toLowerCase() == 'outdoor';
   }
 
   bool get isIndoor {
     final package = widget.selectedPackage;
     if (package == null) return false;
+
     return package.locationType.toLowerCase() == 'indoor';
   }
 
@@ -80,6 +83,19 @@ class _BookingScreenState extends State<BookingScreen> {
       initialDate: now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 180)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: _BookingPalette.darkBlue,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: _BookingPalette.darkBlue,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked == null) return;
@@ -232,6 +248,42 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
+  int packageOriginalPrice(PackageModel package) {
+    return package.price.round();
+  }
+
+  int packageFinalPrice(PackageModel package) {
+    return package.finalPrice.round();
+  }
+
+  int videoAddonPrice(BookingAddonSettingModel? addon) {
+    return addon?.price ?? 0;
+  }
+
+  int extraDurationFee() {
+    return selectedSlot?.extraDurationFee ?? 0;
+  }
+
+  int totalOriginalPrice(
+    PackageModel package,
+    BookingAddonSettingModel? addon,
+  ) {
+    return packageOriginalPrice(package) +
+        videoAddonPrice(addon) +
+        extraDurationFee();
+  }
+
+  int totalFinalPrice(PackageModel package, BookingAddonSettingModel? addon) {
+    return packageFinalPrice(package) +
+        videoAddonPrice(addon) +
+        extraDurationFee();
+  }
+
+  bool hasPackageDiscount(PackageModel package) {
+    return package.hasDiscount &&
+        packageOriginalPrice(package) > packageFinalPrice(package);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookingProvider = context.watch<BookingProvider>();
@@ -242,96 +294,111 @@ class _BookingScreenState extends State<BookingScreen> {
       return const BookingHistoryScreen();
     }
 
+    final originalTotal = totalOriginalPrice(package, selectedAddon);
+    final finalTotal = totalFinalPrice(package, selectedAddon);
+    final discountActive = hasPackageDiscount(package);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Form Booking')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: AppColors.background,
+        foregroundColor: _BookingPalette.darkBlue,
+        centerTitle: true,
+        title: const Text(
+          'Form Booking',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: _BookingPalette.darkBlue,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
             children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Paket Dipilih',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        package.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${package.categoryName} • ${package.locationTypeLabel}',
-                        style: const TextStyle(color: AppColors.grey),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${package.durationMinutes} menit • ${package.photoCount} foto edit',
-                        style: const TextStyle(color: AppColors.grey),
-                      ),
-                    ],
-                  ),
-                ),
+              _SelectedPackageCard(
+                package: package,
+                formatCurrency: formatCurrency,
               ),
-              const SizedBox(height: 20),
-
-              const Text(
-                'Data Klien',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const SizedBox(height: 22),
+              const _SectionTitle(
+                icon: Icons.person_outline_rounded,
+                title: 'Data Klien',
               ),
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: nameController,
                 readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Nama',
-                  helperText: 'Diambil dari akun login',
+                decoration: _inputDecoration(
+                  label: 'Nama',
+                  helper: 'Diambil dari akun login',
+                  icon: Icons.person_outline_rounded,
                 ),
               ),
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: phoneController,
                 readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor HP',
-                  helperText: 'Diambil dari akun login',
+                decoration: _inputDecoration(
+                  label: 'Nomor HP',
+                  helper: 'Diambil dari akun login',
+                  icon: Icons.phone_outlined,
                 ),
               ),
               const SizedBox(height: 24),
-
-              const Text(
-                'Add-on Layanan',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const _SectionTitle(
+                icon: Icons.add_circle_outline_rounded,
+                title: 'Add-on Layanan',
               ),
               const SizedBox(height: 12),
 
               DropdownButtonFormField<int>(
                 value: extraDurationUnits,
-                decoration: const InputDecoration(labelText: 'Extra Duration'),
+                isExpanded: true,
+                menuMaxHeight: 360,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                decoration: _inputDecoration(
+                  label: 'Extra Duration',
+                  icon: Icons.timer_outlined,
+                ),
+                selectedItemBuilder: (context) {
+                  return const [
+                    _DropdownSelectedText('Tidak ada extra durasi'),
+                    _DropdownSelectedText('+ 30 menit'),
+                    _DropdownSelectedText('+ 60 menit'),
+                    _DropdownSelectedText('+ 90 menit'),
+                    _DropdownSelectedText('+ 120 menit'),
+                    _DropdownSelectedText('+ 150 menit'),
+                  ];
+                },
                 items: const [
                   DropdownMenuItem(
                     value: 0,
-                    child: Text('Tidak ada extra durasi'),
+                    child: _DropdownItemText('Tidak ada extra durasi'),
                   ),
-                  DropdownMenuItem(value: 1, child: Text('+ 30 menit')),
-                  DropdownMenuItem(value: 2, child: Text('+ 60 menit')),
-                  DropdownMenuItem(value: 3, child: Text('+ 90 menit')),
-                  DropdownMenuItem(value: 4, child: Text('+ 120 menit')),
-                  DropdownMenuItem(value: 5, child: Text('+ 150 menit')),
+                  DropdownMenuItem(
+                    value: 1,
+                    child: _DropdownItemText('+ 30 menit'),
+                  ),
+                  DropdownMenuItem(
+                    value: 2,
+                    child: _DropdownItemText('+ 60 menit'),
+                  ),
+                  DropdownMenuItem(
+                    value: 3,
+                    child: _DropdownItemText('+ 90 menit'),
+                  ),
+                  DropdownMenuItem(
+                    value: 4,
+                    child: _DropdownItemText('+ 120 menit'),
+                  ),
+                  DropdownMenuItem(
+                    value: 5,
+                    child: _DropdownItemText('+ 150 menit'),
+                  ),
                 ],
                 onChanged: (value) async {
                   setState(() {
@@ -344,20 +411,60 @@ class _BookingScreenState extends State<BookingScreen> {
                   }
                 },
               ),
+
+              if (extraDurationUnits > 0 && selectedSlot == null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Biaya extra durasi akan dihitung setelah kamu memilih jam booking.',
+                  style: TextStyle(
+                    color: _BookingPalette.darkBlue.withValues(alpha: 0.62),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+
+              if (selectedSlot != null &&
+                  selectedSlot!.extraDurationFee > 0) ...[
+                const SizedBox(height: 8),
+                _SmallPriceInfo(
+                  icon: Icons.timer_rounded,
+                  label:
+                      'Extra duration ${selectedSlot!.extraDurationMinutes} menit',
+                  price: formatCurrency(selectedSlot!.extraDurationFee),
+                ),
+              ],
+
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String?>(
                 value: selectedVideoAddonType,
-                decoration: const InputDecoration(labelText: 'Video Cinematic'),
+                isExpanded: true,
+                menuMaxHeight: 360,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                decoration: _inputDecoration(
+                  label: 'Video Cinematic',
+                  icon: Icons.videocam_outlined,
+                ),
+                selectedItemBuilder: (context) {
+                  return [
+                    const _DropdownSelectedText('Tanpa add-on video'),
+                    ...bookingProvider.addons.map(
+                      (addon) => _DropdownSelectedText(
+                        '${addon.addonName} (${formatCurrency(addon.price)})',
+                      ),
+                    ),
+                  ];
+                },
                 items: [
                   const DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('Tanpa add-on video'),
+                    child: _DropdownItemText('Tanpa add-on video'),
                   ),
                   ...bookingProvider.addons.map(
                     (addon) => DropdownMenuItem<String?>(
                       value: addon.addonKey,
-                      child: Text(
+                      child: _DropdownItemText(
                         '${addon.addonName} (${formatCurrency(addon.price)})',
                       ),
                     ),
@@ -371,61 +478,84 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
 
               if (selectedAddon != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'Biaya add-on video: ${formatCurrency(selectedAddon.price)}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                const SizedBox(height: 8),
+                _SmallPriceInfo(
+                  icon: Icons.movie_creation_outlined,
+                  label: selectedAddon.addonName,
+                  price: formatCurrency(selectedAddon.price),
                 ),
               ],
 
               const SizedBox(height: 24),
 
-              const Text(
-                'Jadwal Booking',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const _SectionTitle(
+                icon: Icons.calendar_month_outlined,
+                title: 'Jadwal Booking',
               ),
+
               const SizedBox(height: 12),
 
               InkWell(
                 onTap: pickDate,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Tanggal Booking',
+                  decoration: _inputDecoration(
+                    label: 'Tanggal Booking',
+                    icon: Icons.date_range_outlined,
                   ),
                   child: Text(
                     selectedDate == null
                         ? 'Pilih tanggal booking'
                         : formatDate(selectedDate!),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selectedDate == null
+                          ? AppColors.grey
+                          : _BookingPalette.darkBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
+
               const SizedBox(height: 16),
 
               if (bookingProvider.isLoadingSlots)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: _BookingPalette.darkBlue,
+                    ),
+                  ),
                 )
               else if (selectedDate != null && bookingProvider.slots.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                    gradient: _BookingPalette.softGradient,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _BookingPalette.cardDeep),
                   ),
                   child: const Text(
                     'Belum ada slot tersedia di tanggal ini.',
-                    style: TextStyle(color: AppColors.grey),
+                    style: TextStyle(
+                      color: _BookingPalette.darkBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 )
               else if (bookingProvider.slots.isNotEmpty)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Pilih Jam Booking',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: _BookingPalette.darkBlue.withValues(alpha: 0.82),
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -435,9 +565,31 @@ class _BookingScreenState extends State<BookingScreen> {
                         final isSelected =
                             selectedSlot?.startTime == slot.startTime;
 
+                        final slotLabel = slot.extraDurationFee > 0
+                            ? '${slot.label} • +${formatCurrency(slot.extraDurationFee)}'
+                            : slot.label;
+
                         return ChoiceChip(
-                          label: Text(slot.label),
+                          label: Text(
+                            slotLabel,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           selected: isSelected,
+                          selectedColor: _BookingPalette.darkBlue,
+                          backgroundColor: Colors.white,
+                          checkmarkColor: Colors.white,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : _BookingPalette.darkBlue,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                          side: BorderSide(
+                            color: isSelected
+                                ? _BookingPalette.darkBlue
+                                : _BookingPalette.cardDeep,
+                          ),
                           onSelected: (_) {
                             setState(() {
                               selectedSlot = slot;
@@ -451,42 +603,47 @@ class _BookingScreenState extends State<BookingScreen> {
 
               const SizedBox(height: 24),
 
-              const Text(
-                'Lokasi Foto',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const _SectionTitle(
+                icon: Icons.location_on_outlined,
+                title: 'Lokasi Foto',
               ),
+
               const SizedBox(height: 12),
 
               if (isIndoor)
                 TextFormField(
                   initialValue: 'Indoor Studio Monoframe',
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Lokasi',
-                    helperText: 'Otomatis sesuai paket indoor',
+                  decoration: _inputDecoration(
+                    label: 'Nama Lokasi',
+                    helper: 'Otomatis sesuai paket indoor',
+                    icon: Icons.home_work_outlined,
                   ),
                 )
               else
                 TextFormField(
                   controller: locationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Lokasi Foto',
-                    helperText: 'Wajib diisi untuk paket outdoor',
+                  decoration: _inputDecoration(
+                    label: 'Nama Lokasi Foto',
+                    helper: 'Wajib diisi untuk paket outdoor',
+                    icon: Icons.place_outlined,
                   ),
                   validator: (value) {
                     if (isOutdoor && (value == null || value.trim().isEmpty)) {
                       return 'Nama lokasi outdoor wajib diisi';
                     }
+
                     return null;
                   },
                 ),
 
               const SizedBox(height: 24),
 
-              const Text(
-                'Moodboard',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const _SectionTitle(
+                icon: Icons.image_outlined,
+                title: 'Moodboard',
               ),
+
               const SizedBox(height: 12),
 
               OutlinedButton.icon(
@@ -496,8 +653,20 @@ class _BookingScreenState extends State<BookingScreen> {
                   selectedMoodboards.isEmpty
                       ? 'Tambah Moodboard'
                       : 'Tambah Lagi (${selectedMoodboards.length}/10)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _BookingPalette.darkBlue,
+                  side: const BorderSide(color: _BookingPalette.cardDeep),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
+
               const SizedBox(height: 10),
 
               if (selectedMoodboards.isNotEmpty)
@@ -509,8 +678,18 @@ class _BookingScreenState extends State<BookingScreen> {
                     final fileName = item.path.split('/').last;
 
                     return Chip(
-                      label: Text(fileName),
+                      label: Text(
+                        fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       onDeleted: () => removeMoodboard(index),
+                      backgroundColor: _BookingPalette.cardMid,
+                      side: const BorderSide(color: _BookingPalette.cardDeep),
+                      labelStyle: const TextStyle(
+                        color: _BookingPalette.darkBlue,
+                        fontWeight: FontWeight.w700,
+                      ),
                     );
                   }),
                 )
@@ -522,37 +701,578 @@ class _BookingScreenState extends State<BookingScreen> {
 
               const SizedBox(height: 24),
 
-              const Text(
-                'Catatan untuk Fotografer',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const _SectionTitle(
+                icon: Icons.notes_outlined,
+                title: 'Catatan untuk Fotografer',
               ),
+
               const SizedBox(height: 12),
 
               TextFormField(
                 controller: notesController,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Tulis catatan tambahan untuk fotografer',
+                decoration: _inputDecoration(
+                  label: 'Notes',
+                  hint: 'Tulis catatan tambahan untuk fotografer',
+                  icon: Icons.edit_note_outlined,
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
 
-              ElevatedButton(
-                onPressed: bookingProvider.isSubmitting ? null : submitBooking,
-                child: bookingProvider.isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Submit Booking'),
+              _SubmitAndTotalRow(
+                isSubmitting: bookingProvider.isSubmitting,
+                originalTotal: originalTotal,
+                finalTotal: finalTotal,
+                hasDiscount: discountActive,
+                hasExtraDurationPending:
+                    extraDurationUnits > 0 && selectedSlot == null,
+                formatCurrency: formatCurrency,
+                onSubmit: submitBooking,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    String? helper,
+    String? hint,
+    IconData? icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      helperText: helper,
+      hintText: hint,
+      prefixIcon: icon == null ? null : Icon(icon),
+      filled: true,
+      fillColor: Colors.white,
+      isDense: false,
+      contentPadding: const EdgeInsets.fromLTRB(14, 18, 12, 18),
+      labelStyle: TextStyle(
+        color: _BookingPalette.darkBlue.withValues(alpha: 0.68),
+        fontWeight: FontWeight.w700,
+      ),
+      helperStyle: TextStyle(
+        color: _BookingPalette.darkBlue.withValues(alpha: 0.46),
+        fontWeight: FontWeight.w600,
+      ),
+      hintStyle: const TextStyle(color: AppColors.grey),
+      prefixIconColor: _BookingPalette.darkBlue,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _BookingPalette.cardDeep),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(
+          color: _BookingPalette.darkBlue,
+          width: 1.4,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.danger),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1.4),
+      ),
+    );
+  }
+}
+
+class _BookingPalette {
+  static const Color darkBlue = Color(0xFF233B93);
+  static const Color midBlue = Color(0xFF344FA5);
+  static const Color lightBlue = Color(0xFF5E7BDA);
+
+  static const Color cardLight = Color(0xFFF0FAFF);
+  static const Color cardMid = Color(0xFFD9F0FA);
+  static const Color cardDeep = Color(0xFFC5E4F2);
+
+  static const LinearGradient darkGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkBlue, midBlue, lightBlue],
+  );
+
+  static const LinearGradient softGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [cardLight, cardMid, cardDeep],
+  );
+}
+
+class _DropdownSelectedText extends StatelessWidget {
+  final String text;
+
+  const _DropdownSelectedText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
+        style: const TextStyle(
+          color: AppColors.dark,
+          fontSize: 15.5,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _DropdownItemText extends StatelessWidget {
+  final String text;
+
+  const _DropdownItemText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      softWrap: false,
+      style: const TextStyle(
+        color: AppColors.dark,
+        fontSize: 14.5,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _SelectedPackageCard extends StatelessWidget {
+  final PackageModel package;
+  final String Function(int) formatCurrency;
+
+  const _SelectedPackageCard({
+    required this.package,
+    required this.formatCurrency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final originalPrice = package.price.round();
+    final finalPrice = package.finalPrice.round();
+    final hasDiscount = package.hasDiscount && originalPrice > finalPrice;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: _BookingPalette.darkGradient,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: _BookingPalette.darkBlue.withValues(alpha: 0.18),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -34,
+            top: -36,
+            child: Container(
+              width: 132,
+              height: 132,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Paket Dipilih',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                package.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  height: 1.12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${package.categoryName} • ${package.locationTypeLabel}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.84),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${package.durationMinutes} menit • ${package.photoCount} foto edit',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (hasDiscount)
+                    Text(
+                      formatCurrency(originalPrice),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.56),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.lineThrough,
+                        decorationColor: Colors.white,
+                      ),
+                    ),
+                  Text(
+                    formatCurrency(finalPrice),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (hasDiscount)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${package.activeDiscount?.discountPercent ?? 0}% OFF',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _SectionTitle({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            gradient: _BookingPalette.softGradient,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: Colors.white),
+          ),
+          child: Icon(icon, color: _BookingPalette.darkBlue, size: 16),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _BookingPalette.darkBlue,
+              fontSize: 16,
+              height: 1.1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SmallPriceInfo extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String price;
+
+  const _SmallPriceInfo({
+    required this.icon,
+    required this.label,
+    required this.price,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        gradient: _BookingPalette.softGradient,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.76)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: _BookingPalette.darkBlue, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _BookingPalette.darkBlue,
+                fontWeight: FontWeight.w800,
+                fontSize: 12.5,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            price,
+            style: const TextStyle(
+              color: _BookingPalette.darkBlue,
+              fontWeight: FontWeight.w900,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmitAndTotalRow extends StatelessWidget {
+  final bool isSubmitting;
+  final int originalTotal;
+  final int finalTotal;
+  final bool hasDiscount;
+  final bool hasExtraDurationPending;
+  final String Function(int) formatCurrency;
+  final VoidCallback onSubmit;
+
+  const _SubmitAndTotalRow({
+    required this.isSubmitting,
+    required this.originalTotal,
+    required this.finalTotal,
+    required this.hasDiscount,
+    required this.hasExtraDurationPending,
+    required this.formatCurrency,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: hasExtraDurationPending ? 92 : 74,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 5,
+            child: _TotalPriceCard(
+              originalTotal: originalTotal,
+              finalTotal: finalTotal,
+              hasDiscount: hasDiscount,
+              hasExtraDurationPending: hasExtraDurationPending,
+              formatCurrency: formatCurrency,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 5,
+            child: _SubmitBookingCard(
+              isSubmitting: isSubmitting,
+              onSubmit: onSubmit,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TotalPriceCard extends StatelessWidget {
+  final int originalTotal;
+  final int finalTotal;
+  final bool hasDiscount;
+  final bool hasExtraDurationPending;
+  final String Function(int) formatCurrency;
+
+  const _TotalPriceCard({
+    required this.originalTotal,
+    required this.finalTotal,
+    required this.hasDiscount,
+    required this.hasExtraDurationPending,
+    required this.formatCurrency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        gradient: _BookingPalette.softGradient,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.78)),
+        boxShadow: [
+          BoxShadow(
+            color: _BookingPalette.darkBlue.withValues(alpha: 0.055),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Total Harga',
+            style: TextStyle(
+              color: AppColors.grey,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 3),
+          if (hasDiscount)
+            Text(
+              formatCurrency(originalTotal),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _BookingPalette.darkBlue.withValues(alpha: 0.42),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                decoration: TextDecoration.lineThrough,
+              ),
+            ),
+          Text(
+            formatCurrency(finalTotal),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _BookingPalette.darkBlue,
+              fontSize: 15,
+              height: 1.05,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (hasExtraDurationPending) ...[
+            const SizedBox(height: 4),
+            Text(
+              '+ extra durasi setelah jam dipilih',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _BookingPalette.darkBlue.withValues(alpha: 0.58),
+                fontSize: 8.8,
+                height: 1.1,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmitBookingCard extends StatelessWidget {
+  final bool isSubmitting;
+  final VoidCallback onSubmit;
+
+  const _SubmitBookingCard({
+    required this.isSubmitting,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isSubmitting ? null : onSubmit,
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: _BookingPalette.darkBlue,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: _BookingPalette.darkBlue.withValues(
+          alpha: 0.45,
+        ),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.70),
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+      ),
+      child: isSubmitting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.calendar_month_rounded, size: 18),
+                SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    'Submit Booking',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
