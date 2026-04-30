@@ -19,6 +19,8 @@ class StoreManualBookingRequest extends FormRequest
             'start_time' => ['required'],
             'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
 
+            'photographer_user_id' => ['required', 'exists:users,id'],
+
             'client_name' => ['required', 'string', 'max:255'],
             'client_phone' => ['required', 'string', 'max:25'],
             'client_email' => ['nullable', 'email', 'max:255'],

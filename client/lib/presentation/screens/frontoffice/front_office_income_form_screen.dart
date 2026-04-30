@@ -4,22 +4,22 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/providers/front_office_provider.dart';
 
-class FrontOfficeExpenseFormScreen extends StatefulWidget {
-  const FrontOfficeExpenseFormScreen({super.key});
+class FrontOfficeIncomeFormScreen extends StatefulWidget {
+  const FrontOfficeIncomeFormScreen({super.key});
 
   @override
-  State<FrontOfficeExpenseFormScreen> createState() =>
-      _FrontOfficeExpenseFormScreenState();
+  State<FrontOfficeIncomeFormScreen> createState() =>
+      _FrontOfficeIncomeFormScreenState();
 }
 
-class _FrontOfficeExpenseFormScreenState
-    extends State<FrontOfficeExpenseFormScreen> {
+class _FrontOfficeIncomeFormScreenState
+    extends State<FrontOfficeIncomeFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _categoryController = TextEditingController(text: 'Pengeluaran Studio');
+  final _categoryController = TextEditingController(text: 'Pemasukan Manual');
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  DateTime _expenseDate = DateTime.now();
+  DateTime _incomeDate = DateTime.now();
 
   @override
   void dispose() {
@@ -43,7 +43,7 @@ class _FrontOfficeExpenseFormScreenState
   Future<void> _pickDate() async {
     final result = await showDatePicker(
       context: context,
-      initialDate: _expenseDate,
+      initialDate: _incomeDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
       builder: (context, child) {
@@ -60,7 +60,7 @@ class _FrontOfficeExpenseFormScreenState
     );
 
     if (result != null) {
-      setState(() => _expenseDate = result);
+      setState(() => _incomeDate = result);
     }
   }
 
@@ -69,8 +69,8 @@ class _FrontOfficeExpenseFormScreenState
 
     final provider = context.read<FrontOfficeProvider>();
 
-    final ok = await provider.storeExpense(
-      expenseDate: _formatDate(_expenseDate),
+    final ok = await provider.storeIncome(
+      incomeDate: _formatDate(_incomeDate),
       category: _categoryController.text.trim(),
       amount: _parseAmount(_amountController.text),
       description: _descriptionController.text.trim(),
@@ -80,7 +80,7 @@ class _FrontOfficeExpenseFormScreenState
 
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pengeluaran berhasil disimpan')),
+        const SnackBar(content: Text('Pemasukan berhasil disimpan')),
       );
       Navigator.pop(context);
     } else {
@@ -96,7 +96,7 @@ class _FrontOfficeExpenseFormScreenState
 
     return Scaffold(
       backgroundColor: AppColors.secondary,
-      appBar: AppBar(title: const Text('Input Pengeluaran')),
+      appBar: AppBar(title: const Text('Konfirmasi Pemasukan')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
@@ -104,19 +104,19 @@ class _FrontOfficeExpenseFormScreenState
             Container(
               padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
-                color: AppColors.light,
+                gradient: AppColors.welcomeCardGradient,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.border),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.receipt_long_outlined, color: AppColors.danger),
+                  Icon(Icons.add_card_outlined, color: AppColors.primaryDark),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Catat pengeluaran operasional studio agar saldo dan laporan keuangan tetap sinkron.',
+                      'Gunakan form ini untuk mencatat pemasukan manual, misalnya pembayaran offline, tambahan jasa, atau koreksi kas.',
                       style: TextStyle(
-                        color: AppColors.dark,
+                        color: AppColors.primaryDark,
                         height: 1.45,
                         fontWeight: FontWeight.w700,
                       ),
@@ -132,8 +132,8 @@ class _FrontOfficeExpenseFormScreenState
               child: Column(
                 children: [
                   _DateCard(
-                    title: 'Tanggal Pengeluaran',
-                    value: _formatDate(_expenseDate),
+                    title: 'Tanggal Pemasukan',
+                    value: _formatDate(_incomeDate),
                     onPick: _pickDate,
                   ),
                   const SizedBox(height: 12),
@@ -158,7 +158,7 @@ class _FrontOfficeExpenseFormScreenState
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Nominal',
-                      hintText: 'Contoh: 150000',
+                      hintText: 'Contoh: 250000',
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
                     validator: (value) {
@@ -174,7 +174,7 @@ class _FrontOfficeExpenseFormScreenState
                     maxLines: 4,
                     decoration: const InputDecoration(
                       labelText: 'Keterangan',
-                      hintText: 'Contoh: Beli kertas foto',
+                      hintText: 'Contoh: Pelunasan offline booking #12',
                       prefixIcon: Icon(Icons.notes_outlined),
                     ),
                   ),
@@ -195,7 +195,7 @@ class _FrontOfficeExpenseFormScreenState
                     label: Text(
                       provider.isSubmitting
                           ? 'Menyimpan...'
-                          : 'Simpan Pengeluaran',
+                          : 'Simpan Pemasukan',
                     ),
                   ),
                 ],

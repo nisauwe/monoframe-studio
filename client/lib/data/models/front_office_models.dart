@@ -182,6 +182,7 @@ class FoPhotographerModel {
   final String email;
   final String phone;
   final bool isAvailable;
+  final String availabilityLabel;
 
   FoPhotographerModel({
     required this.id,
@@ -189,15 +190,21 @@ class FoPhotographerModel {
     required this.email,
     required this.phone,
     required this.isAvailable,
+    required this.availabilityLabel,
   });
 
   factory FoPhotographerModel.fromJson(Map<String, dynamic> json) {
+    final isAvailable = _toBool(json['is_available'], defaultValue: false);
+
     return FoPhotographerModel(
       id: _toInt(json['id']),
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
-      isAvailable: _toBool(json['is_available'], defaultValue: true),
+      isAvailable: isAvailable,
+      availabilityLabel:
+          json['availability_label']?.toString() ??
+          (isAvailable ? 'Tersedia' : 'Bentrok Jadwal'),
     );
   }
 }
@@ -367,17 +374,27 @@ class FoProgressModel {
 }
 
 class FoFinanceSummaryModel {
-  final int income;
+  final int bookingPaymentIncome;
+  final int printPaymentIncome;
+  final int paymentIncome;
+  final int manualIncome;
+  final int totalIncome;
   final int expenses;
   final int balance;
   final List<FoPaymentModel> recentPayments;
+  final List<FoIncomeModel> recentIncomes;
   final List<FoExpenseModel> recentExpenses;
 
   FoFinanceSummaryModel({
-    required this.income,
+    required this.bookingPaymentIncome,
+    required this.printPaymentIncome,
+    required this.paymentIncome,
+    required this.manualIncome,
+    required this.totalIncome,
     required this.expenses,
     required this.balance,
     required this.recentPayments,
+    required this.recentIncomes,
     required this.recentExpenses,
   });
 
@@ -390,17 +407,42 @@ class FoFinanceSummaryModel {
         ? json['recent_payments'] as List
         : <dynamic>[];
 
+    final incomesRaw = json['recent_incomes'] is List
+        ? json['recent_incomes'] as List
+        : <dynamic>[];
+
     final expensesRaw = json['recent_expenses'] is List
         ? json['recent_expenses'] as List
         : <dynamic>[];
 
+    final bookingIncome = _toInt(summary['booking_payment_income']);
+    final printIncome = _toInt(summary['print_payment_income']);
+    final paymentIncome = _toInt(
+      summary['payment_income'] ?? (bookingIncome + printIncome),
+    );
+    final manualIncome = _toInt(summary['manual_income']);
+    final totalIncome = _toInt(
+      summary['total_income'] ??
+          summary['income'] ??
+          (paymentIncome + manualIncome),
+    );
+
     return FoFinanceSummaryModel(
-      income: _toInt(summary['income']),
-      expenses: _toInt(summary['expenses']),
-      balance: _toInt(summary['balance']),
+      bookingPaymentIncome: bookingIncome,
+      printPaymentIncome: printIncome,
+      paymentIncome: paymentIncome,
+      manualIncome: manualIncome,
+      totalIncome: totalIncome,
+      expenses: _toInt(summary['total_expense'] ?? summary['expenses']),
+      balance: _toInt(summary['net_balance'] ?? summary['balance']),
       recentPayments: paymentsRaw
           .map(
             (item) => FoPaymentModel.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+      recentIncomes: incomesRaw
+          .map(
+            (item) => FoIncomeModel.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
       recentExpenses: expensesRaw
@@ -410,6 +452,8 @@ class FoFinanceSummaryModel {
           .toList(),
     );
   }
+
+  int get income => totalIncome;
 }
 
 class FoPaymentModel {
@@ -440,8 +484,16 @@ class FoPaymentModel {
         ? Map<String, dynamic>.from(json['schedule_booking'])
         : <String, dynamic>{};
 
+    final printOrder = json['print_order'] is Map
+        ? Map<String, dynamic>.from(json['print_order'])
+        : <String, dynamic>{};
+
     final packageJson = booking['package'] is Map
         ? Map<String, dynamic>.from(booking['package'])
+        : <String, dynamic>{};
+
+    final clientJson = printOrder['client'] is Map
+        ? Map<String, dynamic>.from(printOrder['client'])
         : <String, dynamic>{};
 
     return FoPaymentModel(
@@ -450,11 +502,61 @@ class FoPaymentModel {
       paymentStage: json['payment_stage']?.toString() ?? '',
       transactionStatus: json['transaction_status']?.toString() ?? '',
       grossAmount: _toInt(json['gross_amount']),
-      baseAmount: _toInt(json['base_amount']),
+      baseAmount: _toInt(json['base_amount'] ?? json['gross_amount']),
       paidAt:
           json['paid_at']?.toString() ?? json['settled_at']?.toString() ?? '',
-      clientName: booking['client_name']?.toString() ?? '-',
-      packageName: packageJson['name']?.toString() ?? '-',
+      clientName:
+          booking['client_name']?.toString() ??
+          clientJson['name']?.toString() ??
+          '-',
+      packageName:
+          packageJson['name']?.toString() ??
+          (json['payment_context']?.toString() == 'print'
+              ? 'Pesanan Cetak'
+              : '-'),
+    );
+  }
+
+  String get paymentStageLabel {
+    final value = paymentStage.toLowerCase();
+
+    if (value == 'dp') return 'DP';
+    if (value == 'full') return 'Pelunasan';
+    if (value == 'print') return 'Cetak';
+
+    return paymentStage.isEmpty ? 'Pembayaran' : paymentStage;
+  }
+}
+
+class FoIncomeModel {
+  final int id;
+  final String incomeDate;
+  final String category;
+  final int amount;
+  final String description;
+  final String createdBy;
+
+  FoIncomeModel({
+    required this.id,
+    required this.incomeDate,
+    required this.category,
+    required this.amount,
+    required this.description,
+    required this.createdBy,
+  });
+
+  factory FoIncomeModel.fromJson(Map<String, dynamic> json) {
+    final createdByJson = json['created_by'] is Map
+        ? Map<String, dynamic>.from(json['created_by'])
+        : <String, dynamic>{};
+
+    return FoIncomeModel(
+      id: _toInt(json['id']),
+      incomeDate: json['income_date']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'Pemasukan Manual',
+      amount: _toInt(json['amount']),
+      description: json['description']?.toString() ?? '',
+      createdBy: createdByJson['name']?.toString() ?? '-',
     );
   }
 }

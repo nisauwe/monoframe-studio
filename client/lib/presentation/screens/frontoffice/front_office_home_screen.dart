@@ -17,6 +17,7 @@ class FrontOfficeMainScreen extends StatefulWidget {
 }
 
 class _FrontOfficeMainScreenState extends State<FrontOfficeMainScreen> {
+  // Home dibuat di tengah, sama seperti navigation role klien.
   int _currentIndex = 3;
 
   final List<Widget> _pages = const [
@@ -28,12 +29,6 @@ class _FrontOfficeMainScreenState extends State<FrontOfficeMainScreen> {
     FrontOfficePrintOrdersScreen(),
     FrontOfficeFinanceScreen(),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    debugPrint('FRONT OFFICE CUSTOM CENTER NAV LOADED');
-  }
 
   void _changeTab(int index) {
     setState(() => _currentIndex = index);
@@ -119,7 +114,10 @@ class _FrontOfficeBottomNavigationBar extends StatelessWidget {
                       onTap: () => onChangeTab(2),
                     ),
                   ),
+
+                  // Ruang kosong untuk tombol Home bulat di tengah.
                   const SizedBox(width: 82),
+
                   Expanded(
                     child: _BottomItem(
                       icon: Icons.edit_note_outlined,

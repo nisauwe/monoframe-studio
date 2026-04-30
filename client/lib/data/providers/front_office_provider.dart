@@ -5,6 +5,9 @@ import '../models/front_office_models.dart';
 import '../services/front_office_service.dart';
 
 class FrontOfficeProvider extends ChangeNotifier {
+  int _reviewCount = 0;
+  int get reviewCount => _reviewCount;
+
   final FrontOfficeService _service = FrontOfficeService();
 
   bool _isLoading = false;
@@ -19,6 +22,7 @@ class FrontOfficeProvider extends ChangeNotifier {
   List<FoCalendarEventModel> _calendarEvents = [];
   List<FoProgressModel> _progressList = [];
   List<FoPrintOrderModel> _printOrders = [];
+  List<FoIncomeModel> _incomes = [];
 
   FoFinanceSummaryModel? _financeSummary;
   FoPrintOrderModel? _selectedPrintOrder;
@@ -37,10 +41,35 @@ class FrontOfficeProvider extends ChangeNotifier {
   List<FoCalendarEventModel> get calendarEvents => _calendarEvents;
   List<FoProgressModel> get progressList => _progressList;
   List<FoPrintOrderModel> get printOrders => _printOrders;
+  List<FoIncomeModel> get incomes => _incomes;
 
   FoFinanceSummaryModel? get financeSummary => _financeSummary;
   FoPrintOrderModel? get selectedPrintOrder => _selectedPrintOrder;
   Map<String, dynamic>? get selectedProgressDetail => _selectedProgressDetail;
+
+  Future<void> fetchManualAvailablePhotographers({
+    required String bookingDate,
+    required String startTime,
+    required String endTime,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _availablePhotographers = [];
+    notifyListeners();
+
+    try {
+      _availablePhotographers = await _service.getManualAvailablePhotographers(
+        bookingDate: bookingDate,
+        startTime: startTime,
+        endTime: endTime,
+      );
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> fetchDashboardData() async {
     _isLoading = true;
@@ -59,8 +88,12 @@ class FrontOfficeProvider extends ChangeNotifier {
           endDate: _formatDate(endDate),
         ),
         _service.getProgress(),
-        _service.getFinanceSummary(),
+        _service.getFinanceSummary(
+          startDate: _formatDate(startDate),
+          endDate: _formatDate(endDate),
+        ),
         _service.getPrintOrders(),
+        _service.getReviewCount(),
       ]);
 
       _assignableBookings = results[0] as List<FoBookingModel>;
@@ -68,6 +101,7 @@ class FrontOfficeProvider extends ChangeNotifier {
       _progressList = results[2] as List<FoProgressModel>;
       _financeSummary = results[3] as FoFinanceSummaryModel;
       _printOrders = results[4] as List<FoPrintOrderModel>;
+      _reviewCount = results[5] as int;
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -129,6 +163,7 @@ class FrontOfficeProvider extends ChangeNotifier {
     required String bookingDate,
     required String startTime,
     required int extraDurationUnits,
+    required int photographerUserId,
     required String? locationName,
     required String? notes,
     required String? videoAddonType,
@@ -147,6 +182,7 @@ class FrontOfficeProvider extends ChangeNotifier {
         bookingDate: bookingDate,
         startTime: startTime,
         extraDurationUnits: extraDurationUnits,
+        photographerUserId: photographerUserId,
         locationName: locationName,
         notes: notes,
         videoAddonType: videoAddonType,
@@ -302,6 +338,53 @@ class FrontOfficeProvider extends ChangeNotifier {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchIncomes({String? startDate, String? endDate}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _incomes = await _service.getIncomes(
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> storeIncome({
+    required String incomeDate,
+    required String category,
+    required int amount,
+    required String description,
+  }) async {
+    _isSubmitting = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.storeIncome(
+        incomeDate: incomeDate,
+        category: category,
+        amount: amount,
+        description: description,
+      );
+
+      await fetchFinanceSummary();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      return false;
+    } finally {
+      _isSubmitting = false;
       notifyListeners();
     }
   }

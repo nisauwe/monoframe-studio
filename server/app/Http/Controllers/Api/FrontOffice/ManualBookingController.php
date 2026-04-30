@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Api\FrontOffice;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FrontOffice\StoreManualBookingRequest;
 use App\Models\BookingAddonSetting;
-use App\Models\BookingMoodboard;
 use App\Models\Package;
 use App\Models\ScheduleBooking;
 use App\Models\User;
+use App\Services\BookingTrackingService;
+use App\Services\PhotographerAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ManualBookingController extends Controller
@@ -33,7 +33,7 @@ class ManualBookingController extends Controller
     {
         if (!$package->is_active) {
             return response()->json([
-                'message' => 'Paket tidak tersedia'
+                'message' => 'Paket tidak tersedia',
             ], 404);
         }
 
@@ -56,6 +56,31 @@ class ManualBookingController extends Controller
         return $adminScheduleController->availableSlots($request);
     }
 
+    public function availablePhotographers(
+        Request $request,
+        PhotographerAvailabilityService $availabilityService
+    ) {
+        $validated = $request->validate([
+            'booking_date' => ['required', 'date'],
+            'start_time' => ['required'],
+            'end_time' => ['required'],
+        ]);
+
+        $bookingDate = Carbon::parse($validated['booking_date'])->toDateString();
+
+        $photographers = $availabilityService->getAvailablePhotographers(
+            $bookingDate,
+            $this->normalizeTime($validated['start_time'], true),
+            $this->normalizeTime($validated['end_time'], true),
+            null
+        );
+
+        return response()->json([
+            'message' => 'Daftar fotografer tersedia berhasil diambil',
+            'data' => $photographers->values(),
+        ]);
+    }
+
     public function addonSettings()
     {
         $settings = BookingAddonSetting::query()
@@ -69,8 +94,11 @@ class ManualBookingController extends Controller
         ]);
     }
 
-    public function store(StoreManualBookingRequest $request)
-    {
+    public function store(
+        StoreManualBookingRequest $request,
+        PhotographerAvailabilityService $availabilityService,
+        BookingTrackingService $trackingService
+    ) {
         $validated = $request->validated();
 
         $package = Package::where('is_active', true)->findOrFail($validated['package_id']);
@@ -85,11 +113,45 @@ class ManualBookingController extends Controller
 
         if (!$choice) {
             throw ValidationException::withMessages([
-                'start_time' => 'Slot yang dipilih sudah tidak tersedia.'
+                'start_time' => 'Slot yang dipilih sudah tidak tersedia.',
+            ]);
+        }
+
+        $bookingDate = Carbon::parse($validated['booking_date'])->toDateString();
+        $startTime = $this->normalizeTime($choice['start_time'] ?? $validated['start_time'], true);
+        $endTime = $this->normalizeTime(
+            $choice['blocked_until'] ?? $choice['end_time'] ?? $validated['start_time'],
+            true
+        );
+
+        $photographer = User::query()
+            ->where('id', $validated['photographer_user_id'])
+            ->where('role', 'Fotografer')
+            ->where('is_active', true)
+            ->first();
+
+        if (!$photographer) {
+            throw ValidationException::withMessages([
+                'photographer_user_id' => 'Fotografer tidak ditemukan atau tidak aktif.',
+            ]);
+        }
+
+        $isAvailable = $availabilityService->isPhotographerAvailable(
+            $photographer->id,
+            $bookingDate,
+            $startTime,
+            $endTime,
+            null
+        );
+
+        if (!$isAvailable) {
+            throw ValidationException::withMessages([
+                'photographer_user_id' => 'Fotografer ini tidak tersedia pada slot yang dipilih.',
             ]);
         }
 
         $clientUser = null;
+
         if (!empty($validated['client_email'])) {
             $clientUser = User::query()
                 ->where('email', $validated['client_email'])
@@ -98,17 +160,19 @@ class ManualBookingController extends Controller
         }
 
         $locationType = $this->normalizedLocationType($package);
+
         $locationName = $locationType === 'indoor'
             ? 'Indoor Studio Monoframe'
             : trim((string) ($validated['location_name'] ?? ''));
 
         if ($locationType === 'outdoor' && $locationName === '') {
             throw ValidationException::withMessages([
-                'location_name' => 'Lokasi outdoor wajib diisi.'
+                'location_name' => 'Lokasi outdoor wajib diisi.',
             ]);
         }
 
         $videoAddon = null;
+
         if ($request->filled('video_addon_type')) {
             $videoAddon = BookingAddonSetting::query()
                 ->where('addon_key', $request->video_addon_type)
@@ -119,13 +183,13 @@ class ManualBookingController extends Controller
         $booking = ScheduleBooking::create([
             'package_id' => $package->id,
             'client_user_id' => $clientUser?->id,
-            'photographer_user_id' => null,
+            'photographer_user_id' => $photographer->id,
 
             'client_name' => $validated['client_name'],
             'client_phone' => $validated['client_phone'],
-            'photographer_name' => null,
+            'photographer_name' => $photographer->name,
 
-            'booking_date' => Carbon::parse($validated['booking_date'])->toDateString(),
+            'booking_date' => $bookingDate,
             'start_time' => $choice['start_time'],
             'end_time' => $choice['end_time'],
             'blocked_until' => $choice['blocked_until'] ?? null,
@@ -149,11 +213,17 @@ class ManualBookingController extends Controller
 
         $this->persistMoodboards($booking, $request->file('moodboards', []));
 
-        app(\App\Services\BookingTrackingService::class)->initializeForBooking($booking);
+        $trackingService->initializeForBooking($booking);
+        $trackingService->syncTrackingState($booking);
 
         return response()->json([
-            'message' => 'Booking manual berhasil dibuat',
-            'data' => $booking->load(['package', 'trackings', 'moodboards']),
+            'message' => 'Booking manual berhasil dibuat dan fotografer berhasil ditentukan',
+            'data' => $booking->load([
+                'package',
+                'photographerUser',
+                'trackings',
+                'moodboards',
+            ]),
         ], 201);
     }
 
@@ -198,5 +268,22 @@ class ManualBookingController extends Controller
                 'sort_order' => $index + 1,
             ]);
         }
+    }
+
+    private function normalizeTime(?string $value, bool $withSeconds = false): string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return $withSeconds ? '00:00:00' : '00:00';
+        }
+
+        $parts = explode(':', $value);
+
+        $hour = str_pad((string) ((int) ($parts[0] ?? 0)), 2, '0', STR_PAD_LEFT);
+        $minute = str_pad((string) ((int) ($parts[1] ?? 0)), 2, '0', STR_PAD_LEFT);
+        $second = str_pad((string) ((int) ($parts[2] ?? 0)), 2, '0', STR_PAD_LEFT);
+
+        return $withSeconds ? "{$hour}:{$minute}:{$second}" : "{$hour}:{$minute}";
     }
 }

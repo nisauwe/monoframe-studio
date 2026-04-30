@@ -8,6 +8,36 @@ import 'dio_client.dart';
 class FrontOfficeService {
   final Dio _dio = DioClient().dio;
 
+  Future<List<FoPhotographerModel>> getManualAvailablePhotographers({
+    required String bookingDate,
+    required String startTime,
+    required String endTime,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/front-office/available-photographers',
+        queryParameters: {
+          'booking_date': bookingDate,
+          'start_time': startTime,
+          'end_time': endTime,
+        },
+      );
+
+      final list = _extractList(response.data);
+
+      return list
+          .map(
+            (item) =>
+                FoPhotographerModel.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(
+        _messageFromDio(e, 'Gagal mengambil fotografer tersedia'),
+      );
+    }
+  }
+
   Future<List<FoPackageModel>> getPackages() async {
     final response = await _dio.get('/front-office/packages');
     final list = _extractList(response.data);
@@ -58,6 +88,7 @@ class FrontOfficeService {
     required String bookingDate,
     required String startTime,
     required int extraDurationUnits,
+    required int photographerUserId,
     required String? locationName,
     required String? notes,
     required String? videoAddonType,
@@ -83,6 +114,7 @@ class FrontOfficeService {
       'booking_date': bookingDate,
       'start_time': startTime,
       'extra_duration_units': extraDurationUnits,
+      'photographer_user_id': photographerUserId,
       if (locationName != null && locationName.isNotEmpty)
         'location_name': locationName,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
@@ -253,6 +285,52 @@ class FrontOfficeService {
     }
   }
 
+  Future<List<FoIncomeModel>> getIncomes({
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/front-office/incomes',
+        queryParameters: {
+          if (startDate != null) 'start_date': startDate,
+          if (endDate != null) 'end_date': endDate,
+        },
+      );
+
+      final list = _extractList(response.data);
+
+      return list
+          .map(
+            (item) => FoIncomeModel.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e, 'Gagal mengambil pemasukan'));
+    }
+  }
+
+  Future<void> storeIncome({
+    required String incomeDate,
+    required String category,
+    required int amount,
+    required String description,
+  }) async {
+    try {
+      await _dio.post(
+        '/front-office/incomes',
+        data: {
+          'income_date': incomeDate,
+          'category': category,
+          'amount': amount,
+          'description': description,
+        },
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e, 'Gagal menyimpan pemasukan'));
+    }
+  }
+
   Future<void> storeExpense({
     required String expenseDate,
     required String category,
@@ -405,5 +483,28 @@ class FrontOfficeService {
     }
 
     return fallback;
+  }
+
+  Future<int> getReviewCount() async {
+    try {
+      final response = await _dio.get('/front-office/reviews/summary');
+
+      final data = response.data is Map
+          ? Map<String, dynamic>.from(response.data)
+          : <String, dynamic>{};
+
+      final summary = data['summary'] is Map
+          ? Map<String, dynamic>.from(data['summary'])
+          : <String, dynamic>{};
+
+      final value = summary['total_reviews'];
+
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e, 'Gagal mengambil jumlah review'));
+    }
   }
 }

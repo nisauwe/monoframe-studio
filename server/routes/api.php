@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Client\CallCenterContactController as ClientCallCen
 use App\Http\Controllers\Api\Client\PrintOrderController as ClientPrintOrderController;
 use App\Http\Controllers\Api\Client\PrintPaymentController as ClientPrintPaymentController;
 use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
+use App\Http\Controllers\Api\Client\ClientNotificationController;
 
 use App\Http\Controllers\Api\Photographer\AssignedBookingController as PhotographerAssignedBookingController;
 use App\Http\Controllers\Api\Photographer\PhotoLinkController as PhotographerPhotoLinkController;
@@ -32,7 +33,7 @@ use App\Http\Controllers\Api\FrontOffice\ProgressMonitoringController as FrontOf
 use App\Http\Controllers\Api\FrontOffice\FinanceController as FrontOfficeFinanceController;
 use App\Http\Controllers\Api\FrontOffice\EditAssignmentController as FrontOfficeEditAssignmentController;
 use App\Http\Controllers\Api\FrontOffice\PrintOrderController as FrontOfficePrintOrderController;
-use App\Http\Controllers\Api\Client\ClientNotificationController;
+use App\Http\Controllers\Api\FrontOffice\ReviewController as FrontOfficeReviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -126,7 +127,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/booking-addon-settings', [BookingAddonSettingController::class, 'index']);
 
-
         /*
         |--------------------------------------------------------------------------
         | Tracking
@@ -134,7 +134,6 @@ Route::middleware('auth:sanctum')->group(function () {
         */
 
         Route::get('/tracking/{booking}', [TrackingController::class, 'show']);
-
         Route::get('/notifications', [ClientNotificationController::class, 'index']);
 
         /*
@@ -149,8 +148,6 @@ Route::middleware('auth:sanctum')->group(function () {
         |--------------------------------------------------------------------------
         | Edit Request
         |--------------------------------------------------------------------------
-        | Klien mengirim list nama file foto yang ingin diedit.
-        |--------------------------------------------------------------------------
         */
 
         Route::get('/edit-requests/{booking}', [ClientEditRequestController::class, 'show']);
@@ -159,13 +156,6 @@ Route::middleware('auth:sanctum')->group(function () {
         /*
         |--------------------------------------------------------------------------
         | Print Order
-        |--------------------------------------------------------------------------
-        | Alur cetak klien:
-        | - ambil harga cetak
-        | - lihat order cetak booking
-        | - buat order cetak
-        | - skip cetak
-        | - bayar cetak
         |--------------------------------------------------------------------------
         */
 
@@ -235,6 +225,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/packages', [FrontOfficeManualBookingController::class, 'packages']);
         Route::get('/packages/{package}', [FrontOfficeManualBookingController::class, 'packageShow']);
         Route::get('/available-slots', [FrontOfficeManualBookingController::class, 'availableSlots']);
+        Route::get('/available-photographers', [FrontOfficeManualBookingController::class, 'availablePhotographers']);
         Route::get('/addon-settings', [FrontOfficeManualBookingController::class, 'addonSettings']);
         Route::post('/bookings/manual', [FrontOfficeManualBookingController::class, 'store']);
 
@@ -274,6 +265,9 @@ Route::middleware('auth:sanctum')->group(function () {
         */
 
         Route::get('/progress', [FrontOfficeProgressMonitoringController::class, 'index']);
+        Route::get('/progress/{booking}/available-slots', [FrontOfficeProgressMonitoringController::class, 'availableSlotsForEdit']);
+        Route::get('/progress/{booking}/available-photographers', [FrontOfficeProgressMonitoringController::class, 'availablePhotographersForEdit']);
+        Route::patch('/progress/{booking}/booking', [FrontOfficeProgressMonitoringController::class, 'updateBooking']);
         Route::get('/progress/{booking}', [FrontOfficeProgressMonitoringController::class, 'show']);
 
         /*
@@ -291,6 +285,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         /*
         |--------------------------------------------------------------------------
+        | Review
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/reviews/summary', [FrontOfficeReviewController::class, 'summary']);
+
+        /*
+        |--------------------------------------------------------------------------
         | Finance
         |--------------------------------------------------------------------------
         */
@@ -298,5 +300,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/finance/summary', [FrontOfficeFinanceController::class, 'summary']);
         Route::get('/expenses', [FrontOfficeFinanceController::class, 'expenses']);
         Route::post('/expenses', [FrontOfficeFinanceController::class, 'storeExpense']);
+        Route::get('/incomes', [FrontOfficeFinanceController::class, 'incomes']);
+        Route::post('/incomes', [FrontOfficeFinanceController::class, 'storeIncome']);
     });
 });
