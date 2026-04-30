@@ -350,8 +350,9 @@ class _DetailTopBar extends StatelessWidget {
             child: Text(
               title,
               style: const TextStyle(
-                fontWeight: FontWeight.w900,
                 color: _DetailPalette.darkBlue,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),

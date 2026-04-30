@@ -13,7 +13,7 @@ class DioClient {
   }
 
   // GANTI IP INI SESUAI IP LAPTOP/SERVER LARAVEL KAMU
-  static const String _serverHost = '10.145.99.14';
+  static const String _serverHost = '10.157.71.14';
   static const String _serverPort = '8000';
 
   static String get baseApiUrl {

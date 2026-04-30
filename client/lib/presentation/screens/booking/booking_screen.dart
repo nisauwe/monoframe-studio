@@ -6,9 +6,11 @@ import 'package:provider/provider.dart';
 import 'booking_history_screen.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../data/models/app_setting_model.dart';
 import '../../../data/models/booking_addon_setting_model.dart';
 import '../../../data/models/package_model.dart';
 import '../../../data/models/schedule_slot_model.dart';
+import '../../../data/providers/app_setting_provider.dart';
 import '../../../data/providers/auth_provider.dart';
 import '../../../data/providers/booking_provider.dart';
 import '../payment/booking_payment_screen.dart';
@@ -48,6 +50,7 @@ class _BookingScreenState extends State<BookingScreen> {
     phoneController = TextEditingController(text: user?.phone ?? '');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppSettingProvider>().fetchSettings();
       context.read<BookingProvider>().fetchAddons();
     });
   }
@@ -73,6 +76,52 @@ class _BookingScreenState extends State<BookingScreen> {
     if (package == null) return false;
 
     return package.locationType.toLowerCase() == 'indoor';
+  }
+
+  int _maxMoodboardUpload(BookingSetting setting) {
+    if (setting.maxMoodboardUpload <= 0) return 10;
+    return setting.maxMoodboardUpload;
+  }
+
+  int _maxExtraDurationUnits(BookingSetting setting) {
+    if (setting.maxExtraDurationUnits < 0) return 0;
+    return setting.maxExtraDurationUnits;
+  }
+
+  int _safeExtraDurationValue(int maxUnits) {
+    if (extraDurationUnits < 0) return 0;
+    if (extraDurationUnits > maxUnits) return 0;
+    return extraDurationUnits;
+  }
+
+  List<DropdownMenuItem<int>> extraDurationItems(int maxUnits) {
+    final safeMax = maxUnits < 0 ? 0 : maxUnits;
+
+    return List.generate(safeMax + 1, (index) {
+      if (index == 0) {
+        return const DropdownMenuItem<int>(
+          value: 0,
+          child: _DropdownItemText('Tidak ada extra durasi'),
+        );
+      }
+
+      return DropdownMenuItem<int>(
+        value: index,
+        child: _DropdownItemText('+ ${index * 30} menit'),
+      );
+    });
+  }
+
+  List<Widget> extraDurationSelectedItems(int maxUnits) {
+    final safeMax = maxUnits < 0 ? 0 : maxUnits;
+
+    return List.generate(safeMax + 1, (index) {
+      if (index == 0) {
+        return const _DropdownSelectedText('Tidak ada extra durasi');
+      }
+
+      return _DropdownSelectedText('+ ${index * 30} menit');
+    });
   }
 
   Future<void> pickDate() async {
@@ -121,15 +170,18 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> pickMoodboards() async {
+    final setting = context.read<AppSettingProvider>().setting.booking;
+    final maxUpload = _maxMoodboardUpload(setting);
+
     final images = await _picker.pickMultiImage(imageQuality: 85);
 
     if (images.isEmpty) return;
 
     final combined = [...selectedMoodboards, ...images];
 
-    if (combined.length > 10) {
+    if (combined.length > maxUpload) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Moodboard maksimal 10 file')),
+        SnackBar(content: Text('Moodboard maksimal $maxUpload file')),
       );
       return;
     }
@@ -146,6 +198,23 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> submitBooking() async {
+    final appSetting = context.read<AppSettingProvider>().setting;
+    final bookingSetting = appSetting.booking;
+    final maxMoodboardUpload = _maxMoodboardUpload(bookingSetting);
+
+    if (!bookingSetting.isActive) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            bookingSetting.closedMessage.isNotEmpty
+                ? bookingSetting.closedMessage
+                : 'Booking sedang ditutup oleh admin.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (widget.selectedPackage == null) {
       ScaffoldMessenger.of(
         context,
@@ -169,9 +238,9 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
-    if (selectedMoodboards.length > 10) {
+    if (selectedMoodboards.length > maxMoodboardUpload) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Moodboard maksimal 10 file')),
+        SnackBar(content: Text('Moodboard maksimal $maxMoodboardUpload file')),
       );
       return;
     }
@@ -286,12 +355,33 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appSettingProvider = context.watch<AppSettingProvider>();
     final bookingProvider = context.watch<BookingProvider>();
+
     final package = widget.selectedPackage;
+    final bookingSetting = appSettingProvider.setting.booking;
+    final maxMoodboardUpload = _maxMoodboardUpload(bookingSetting);
+    final maxExtraDurationUnits = _maxExtraDurationUnits(bookingSetting);
+
+    if (extraDurationUnits > maxExtraDurationUnits) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        setState(() {
+          extraDurationUnits = 0;
+          selectedSlot = null;
+        });
+      });
+    }
+
     final selectedAddon = getSelectedAddon(bookingProvider.addons);
 
     if (package == null) {
       return const BookingHistoryScreen();
+    }
+
+    if (!bookingSetting.isActive) {
+      return _BookingClosedView(message: bookingSetting.closedMessage);
     }
 
     final originalTotal = totalOriginalPrice(package, selectedAddon);
@@ -308,6 +398,7 @@ class _BookingScreenState extends State<BookingScreen> {
         title: const Text(
           'Form Booking',
           style: TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.w900,
             color: _BookingPalette.darkBlue,
           ),
@@ -323,12 +414,16 @@ class _BookingScreenState extends State<BookingScreen> {
                 package: package,
                 formatCurrency: formatCurrency,
               ),
+
               const SizedBox(height: 22),
+
               const _SectionTitle(
                 icon: Icons.person_outline_rounded,
                 title: 'Data Klien',
               ),
+
               const SizedBox(height: 12),
+
               TextFormField(
                 controller: nameController,
                 readOnly: true,
@@ -338,7 +433,9 @@ class _BookingScreenState extends State<BookingScreen> {
                   icon: Icons.person_outline_rounded,
                 ),
               ),
+
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: phoneController,
                 readOnly: true,
@@ -348,15 +445,18 @@ class _BookingScreenState extends State<BookingScreen> {
                   icon: Icons.phone_outlined,
                 ),
               ),
+
               const SizedBox(height: 24),
+
               const _SectionTitle(
                 icon: Icons.add_circle_outline_rounded,
                 title: 'Add-on Layanan',
               ),
+
               const SizedBox(height: 12),
 
               DropdownButtonFormField<int>(
-                value: extraDurationUnits,
+                value: _safeExtraDurationValue(maxExtraDurationUnits),
                 isExpanded: true,
                 menuMaxHeight: 360,
                 icon: const Icon(Icons.keyboard_arrow_down_rounded),
@@ -365,41 +465,9 @@ class _BookingScreenState extends State<BookingScreen> {
                   icon: Icons.timer_outlined,
                 ),
                 selectedItemBuilder: (context) {
-                  return const [
-                    _DropdownSelectedText('Tidak ada extra durasi'),
-                    _DropdownSelectedText('+ 30 menit'),
-                    _DropdownSelectedText('+ 60 menit'),
-                    _DropdownSelectedText('+ 90 menit'),
-                    _DropdownSelectedText('+ 120 menit'),
-                    _DropdownSelectedText('+ 150 menit'),
-                  ];
+                  return extraDurationSelectedItems(maxExtraDurationUnits);
                 },
-                items: const [
-                  DropdownMenuItem(
-                    value: 0,
-                    child: _DropdownItemText('Tidak ada extra durasi'),
-                  ),
-                  DropdownMenuItem(
-                    value: 1,
-                    child: _DropdownItemText('+ 30 menit'),
-                  ),
-                  DropdownMenuItem(
-                    value: 2,
-                    child: _DropdownItemText('+ 60 menit'),
-                  ),
-                  DropdownMenuItem(
-                    value: 3,
-                    child: _DropdownItemText('+ 90 menit'),
-                  ),
-                  DropdownMenuItem(
-                    value: 4,
-                    child: _DropdownItemText('+ 120 menit'),
-                  ),
-                  DropdownMenuItem(
-                    value: 5,
-                    child: _DropdownItemText('+ 150 menit'),
-                  ),
-                ],
+                items: extraDurationItems(maxExtraDurationUnits),
                 onChanged: (value) async {
                   setState(() {
                     extraDurationUnits = value ?? 0;
@@ -411,6 +479,18 @@ class _BookingScreenState extends State<BookingScreen> {
                   }
                 },
               ),
+
+              if (maxExtraDurationUnits <= 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Extra duration sedang tidak tersedia.',
+                  style: TextStyle(
+                    color: _BookingPalette.darkBlue.withValues(alpha: 0.62),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
 
               if (extraDurationUnits > 0 && selectedSlot == null) ...[
                 const SizedBox(height: 8),
@@ -652,7 +732,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 label: Text(
                   selectedMoodboards.isEmpty
                       ? 'Tambah Moodboard'
-                      : 'Tambah Lagi (${selectedMoodboards.length}/10)',
+                      : 'Tambah Lagi (${selectedMoodboards.length}/$maxMoodboardUpload)',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -694,9 +774,9 @@ class _BookingScreenState extends State<BookingScreen> {
                   }),
                 )
               else
-                const Text(
-                  'Moodboard opsional. Maksimal 10 file.',
-                  style: TextStyle(color: AppColors.grey),
+                Text(
+                  'Moodboard opsional. Maksimal $maxMoodboardUpload file.',
+                  style: const TextStyle(color: AppColors.grey),
                 ),
 
               const SizedBox(height: 24),
@@ -717,6 +797,20 @@ class _BookingScreenState extends State<BookingScreen> {
                   icon: Icons.edit_note_outlined,
                 ),
               ),
+
+              if (bookingSetting.policy.isNotEmpty ||
+                  bookingSetting.terms.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const _SectionTitle(
+                  icon: Icons.policy_outlined,
+                  title: 'Kebijakan Booking',
+                ),
+                const SizedBox(height: 12),
+                _BookingPolicyCard(
+                  policy: bookingSetting.policy,
+                  terms: bookingSetting.terms,
+                ),
+              ],
 
               const SizedBox(height: 28),
 
@@ -805,6 +899,95 @@ class _BookingPalette {
     end: Alignment.bottomRight,
     colors: [cardLight, cardMid, cardDeep],
   );
+}
+
+class _BookingClosedView extends StatelessWidget {
+  final String message;
+
+  const _BookingClosedView({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: AppColors.background,
+        foregroundColor: _BookingPalette.darkBlue,
+        centerTitle: true,
+        title: const Text(
+          'Form Booking',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: _BookingPalette.darkBlue,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
+              decoration: BoxDecoration(
+                gradient: _BookingPalette.softGradient,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.78)),
+                boxShadow: [
+                  BoxShadow(
+                    color: _BookingPalette.darkBlue.withValues(alpha: 0.07),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.65),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.event_busy_rounded,
+                      color: _BookingPalette.darkBlue,
+                      size: 38,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Booking Sedang Ditutup',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _BookingPalette.darkBlue,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message.isNotEmpty
+                        ? message
+                        : 'Booking sementara ditutup. Silakan hubungi admin untuk informasi lebih lanjut.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _BookingPalette.darkBlue.withValues(alpha: 0.66),
+                      height: 1.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _DropdownSelectedText extends StatelessWidget {
@@ -1077,6 +1260,75 @@ class _SmallPriceInfo extends StatelessWidget {
               fontSize: 12.5,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingPolicyCard extends StatelessWidget {
+  final String policy;
+  final String terms;
+
+  const _BookingPolicyCard({required this.policy, required this.terms});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPolicy = policy.trim().isNotEmpty;
+    final hasTerms = terms.trim().isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        gradient: _BookingPalette.softGradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.78)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasPolicy) ...[
+            const Text(
+              'Catatan Kebijakan',
+              style: TextStyle(
+                color: _BookingPalette.darkBlue,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              policy,
+              style: TextStyle(
+                color: _BookingPalette.darkBlue.withValues(alpha: 0.68),
+                height: 1.45,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (hasPolicy && hasTerms) const SizedBox(height: 12),
+          if (hasTerms) ...[
+            const Text(
+              'Syarat & Ketentuan',
+              style: TextStyle(
+                color: _BookingPalette.darkBlue,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              terms,
+              style: TextStyle(
+                color: _BookingPalette.darkBlue.withValues(alpha: 0.68),
+                height: 1.45,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );

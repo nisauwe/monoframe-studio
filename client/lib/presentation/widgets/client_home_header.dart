@@ -27,6 +27,20 @@ class ClientHomeHeader extends StatelessWidget {
     final studio = setting.studio;
     final home = setting.clientHome;
 
+    final studioName = studio.name.trim().isNotEmpty
+        ? studio.name.trim()
+        : 'Monoframe Studio';
+
+    final homeTitle = home.title.trim().isNotEmpty
+        ? home.title.trim()
+        : 'Abadikan momen terbaik bersama Monoframe Studio';
+
+    final homeSubtitle = home.subtitle.trim().isNotEmpty
+        ? home.subtitle.trim()
+        : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.';
+
+    final showSupportButton = onSupportPressed != null;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
@@ -79,9 +93,7 @@ class ClientHomeHeader extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          studio.name.isNotEmpty
-                              ? studio.name
-                              : 'Monoframe Studio',
+                          studioName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -106,57 +118,9 @@ class ClientHomeHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        onPressed: onNotificationPressed,
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.16),
-                          foregroundColor: Colors.white,
-                          fixedSize: const Size(52, 52),
-                        ),
-                        icon: const Icon(
-                          Icons.notifications_none_rounded,
-                          size: 29,
-                        ),
-                      ),
-                      if (unreadNotificationCount > 0)
-                        Positioned(
-                          right: -2,
-                          top: -2,
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 24,
-                              minHeight: 24,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1.7,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              unreadNotificationCount > 99
-                                  ? '99+'
-                                  : unreadNotificationCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                height: 1,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+                  _NotificationButton(
+                    unreadNotificationCount: unreadNotificationCount,
+                    onPressed: onNotificationPressed,
                   ),
                 ],
               ),
@@ -164,9 +128,9 @@ class ClientHomeHeader extends StatelessWidget {
               const SizedBox(height: 28),
 
               Text(
-                home.title.isNotEmpty
-                    ? home.title
-                    : 'Abadikan momen terbaik bersama Monoframe Studio',
+                homeTitle,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -179,9 +143,7 @@ class ClientHomeHeader extends StatelessWidget {
               const SizedBox(height: 16),
 
               Text(
-                home.subtitle.isNotEmpty
-                    ? home.subtitle
-                    : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.',
+                homeSubtitle,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -203,20 +165,76 @@ class ClientHomeHeader extends StatelessWidget {
                       onTap: onBookingPressed,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _HeaderActionButton(
-                      icon: Icons.support_agent_rounded,
-                      label: 'Call Center',
-                      onTap: onSupportPressed,
+                  if (showSupportButton) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HeaderActionButton(
+                        icon: Icons.support_agent_rounded,
+                        label: 'Call Center',
+                        onTap: onSupportPressed,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NotificationButton extends StatelessWidget {
+  final int unreadNotificationCount;
+  final VoidCallback? onPressed;
+
+  const _NotificationButton({
+    required this.unreadNotificationCount,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          onPressed: onPressed,
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.16),
+            foregroundColor: Colors.white,
+            fixedSize: const Size(52, 52),
+          ),
+          icon: const Icon(Icons.notifications_none_rounded, size: 29),
+        ),
+        if (unreadNotificationCount > 0)
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.warning,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white, width: 1.7),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                unreadNotificationCount > 99
+                    ? '99+'
+                    : unreadNotificationCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

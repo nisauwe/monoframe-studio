@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/providers/app_setting_provider.dart';
 import '../../../data/providers/auth_provider.dart';
 import '../auth/auth_welcome_screen.dart';
 import '../role/role_gate_screen.dart';
@@ -23,6 +24,8 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _logoScale;
   late final Animation<double> _logoSlide;
   late final Animation<double> _logoGlow;
+
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -65,19 +68,55 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _introController.forward();
-    _checkLogin();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
   }
 
-  Future<void> _checkLogin() async {
-    await Future.delayed(const Duration(milliseconds: 2300));
+  Future<void> _initializeApp() async {
+    if (_hasNavigated) return;
 
-    if (!mounted) return;
+    try {
+      final minimumSplashDelay = Future<void>.delayed(
+        const Duration(milliseconds: 2300),
+      );
 
-    await context.read<AuthProvider>().checkSession();
+      final appSettingProvider = context.read<AppSettingProvider>();
+      final authProvider = context.read<AuthProvider>();
 
-    if (!mounted) return;
+      await Future.wait([
+        minimumSplashDelay,
+        appSettingProvider.fetchSettings(),
+      ]);
 
-    final authProvider = context.read<AuthProvider>();
+      if (!mounted) return;
+
+      await authProvider.checkSession();
+
+      if (!mounted) return;
+
+      _goToNextScreen(authProvider.isLoggedIn);
+    } catch (e) {
+      if (!mounted) return;
+
+      try {
+        await context.read<AuthProvider>().checkSession();
+      } catch (_) {
+        // Kalau cek session ikut gagal, tetap arahkan user ke welcome screen.
+      }
+
+      if (!mounted) return;
+
+      final authProvider = context.read<AuthProvider>();
+      _goToNextScreen(authProvider.isLoggedIn);
+    }
+  }
+
+  void _goToNextScreen(bool isLoggedIn) {
+    if (_hasNavigated || !mounted) return;
+
+    _hasNavigated = true;
 
     Navigator.pushReplacement(
       context,
@@ -85,7 +124,7 @@ class _SplashScreenState extends State<SplashScreen>
         transitionDuration: const Duration(milliseconds: 650),
         reverseTransitionDuration: const Duration(milliseconds: 450),
         pageBuilder: (_, __, ___) {
-          return authProvider.isLoggedIn
+          return isLoggedIn
               ? const RoleGateScreen()
               : const AuthWelcomeScreen();
         },
@@ -126,7 +165,6 @@ class _SplashScreenState extends State<SplashScreen>
               _SplashPremiumBackground(
                 animationValue: _backgroundController.value,
               ),
-
               SafeArea(
                 child: Center(
                   child: Transform.translate(
@@ -186,7 +224,6 @@ class _LogoOnlyStage extends StatelessWidget {
               ),
             ),
           ),
-
           Container(
             width: 290,
             height: 290,
@@ -198,7 +235,6 @@ class _LogoOnlyStage extends StatelessWidget {
               ),
             ),
           ),
-
           Container(
             width: 230,
             height: 230,
@@ -210,7 +246,6 @@ class _LogoOnlyStage extends StatelessWidget {
               ),
             ),
           ),
-
           Image.asset(
             'assets/images/monoframe_logo_full.png',
             width: 310,
@@ -231,9 +266,9 @@ class _FallbackLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       mainAxisSize: MainAxisSize.min,
-      children: const [
+      children: [
         Icon(Icons.camera_alt_rounded, color: Colors.white, size: 106),
         SizedBox(height: 18),
         Text(
@@ -284,7 +319,6 @@ class _SplashPremiumBackground extends StatelessWidget {
               color: const Color(0xFFDDEFFF).withOpacity(0.30),
             ),
           ),
-
           Positioned(
             left: -165,
             top: 175 - (drift * 8),
@@ -293,7 +327,6 @@ class _SplashPremiumBackground extends StatelessWidget {
               color: const Color(0xFF8FB6FF).withOpacity(0.18),
             ),
           ),
-
           Positioned(
             bottom: -135,
             right: -80 + (drift * 8),
@@ -302,7 +335,6 @@ class _SplashPremiumBackground extends StatelessWidget {
               color: const Color(0xFFA8CBE0).withOpacity(0.24),
             ),
           ),
-
           Positioned(
             top: 125,
             right: 42,
@@ -312,7 +344,6 @@ class _SplashPremiumBackground extends StatelessWidget {
               opacity: 0.72,
             ),
           ),
-
           Positioned(
             bottom: 168,
             left: 44,
@@ -322,21 +353,17 @@ class _SplashPremiumBackground extends StatelessWidget {
               opacity: 0.62,
             ),
           ),
-
           Positioned(
             top: 250,
             left: 82,
             child: _FloatingDot(size: 5, color: Colors.white, opacity: 0.42),
           ),
-
           Positioned.fill(
             child: CustomPaint(painter: _PremiumGridPainter(animationValue)),
           ),
-
           Positioned.fill(
             child: CustomPaint(painter: _SoftParticlePainter(animationValue)),
           ),
-
           Positioned.fill(
             child: IgnorePointer(
               child: DecoratedBox(

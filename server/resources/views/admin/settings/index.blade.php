@@ -591,13 +591,6 @@
         </button>
       </div>
     </div>
-
-    <div class="settings-floating-save">
-      <button type="submit" class="btn">
-        <i class="bx bx-save me-1"></i>
-        Simpan Pengaturan
-      </button>
-    </div>
   </form>
 </div>
 
@@ -607,11 +600,9 @@
     --mf-primary-dark: #233b93;
     --mf-primary-light: #6b7fd7;
     --mf-primary-soft: #eef4ff;
-    --mf-blue-soft: #eaf6fb;
     --mf-text: #10223f;
     --mf-muted: #697a8d;
     --mf-border: #e5edf5;
-    --mf-white: #ffffff;
 
     max-width: 1480px;
     margin: 0 auto;
@@ -759,29 +750,104 @@
     box-shadow: 0 14px 38px rgba(67, 89, 113, .10);
   }
 
-  .settings-stat-card {
+  .settings-card {
+    overflow: hidden;
+    position: relative;
+  }
+
+  .settings-card:hover {
+    box-shadow: 0 24px 65px rgba(67, 89, 113, .14);
+  }
+
+  .settings-stat-card,
+  .integration-card {
     position: relative;
     overflow: hidden;
+    cursor: pointer;
+    transform: translateY(0);
+    will-change: transform, box-shadow;
+    perspective: 900px;
+  }
+
+  .settings-stat-card {
     min-height: 148px;
     padding: 22px;
   }
 
-  .settings-stat-card::before {
+  .integration-card {
+    padding: 24px;
+    height: 100%;
+    min-height: 246px;
+    border-color: rgba(226, 234, 240, .95);
+  }
+
+  .settings-stat-card::before,
+  .integration-card::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 90% 10%, rgba(52, 79, 165, .12), transparent 35%);
+    background:
+      radial-gradient(circle at 90% 10%, rgba(52, 79, 165, .16), transparent 35%),
+      linear-gradient(135deg, rgba(52, 79, 165, .04), rgba(168, 203, 224, .10));
     opacity: 0;
+    pointer-events: none;
+    z-index: 0;
   }
 
-  .settings-stat-card:hover {
-    transform: translateY(-8px);
-    border-color: rgba(52, 79, 165, .25);
-    box-shadow: 0 26px 55px rgba(52, 79, 165, .16);
+  .settings-stat-card::after,
+  .integration-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, .55),
+        rgba(255, 255, 255, 0) 45%,
+        rgba(52, 79, 165, .10)
+      );
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
   }
 
-  .settings-stat-card:hover::before {
+  .settings-stat-card > *,
+  .integration-card > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .settings-stat-card:hover,
+  .settings-reveal.is-visible.settings-stat-card:hover,
+  .integration-card:hover,
+  .settings-reveal.is-visible.integration-card:hover {
+    transform: translateY(-10px) scale(1.018);
+    border-color: rgba(52, 79, 165, .32);
+    box-shadow:
+      0 30px 65px rgba(52, 79, 165, .20),
+      0 12px 26px rgba(15, 23, 42, .08);
+  }
+
+  .settings-stat-card:hover::before,
+  .settings-reveal.is-visible.settings-stat-card:hover::before,
+  .integration-card:hover::before,
+  .settings-reveal.is-visible.integration-card:hover::before,
+  .settings-stat-card:hover::after,
+  .settings-reveal.is-visible.settings-stat-card:hover::after,
+  .integration-card:hover::after,
+  .settings-reveal.is-visible.integration-card:hover::after {
     opacity: 1;
+  }
+
+  .settings-stat-card:active,
+  .settings-reveal.is-visible.settings-stat-card:active,
+  .integration-card:active,
+  .settings-reveal.is-visible.integration-card:active {
+    transform: translateY(-4px) scale(.99);
+    box-shadow:
+      0 18px 38px rgba(52, 79, 165, .16),
+      0 8px 18px rgba(15, 23, 42, .06);
   }
 
   .settings-stat-icon {
@@ -797,16 +863,18 @@
     background: rgba(52, 79, 165, .10);
     font-size: 22px;
     opacity: .92;
+    z-index: 3;
   }
 
-  .settings-stat-card:hover .settings-stat-icon {
-    transform: rotate(-8deg) scale(1.08);
-    background: rgba(52, 79, 165, .16);
+  .settings-stat-card:hover .settings-stat-icon,
+  .settings-reveal.is-visible.settings-stat-card:hover .settings-stat-icon {
+    transform: rotate(-8deg) scale(1.12);
+    background: linear-gradient(135deg, #344fa5, #233b93);
+    color: #fff;
+    box-shadow: 0 14px 28px rgba(52, 79, 165, .26);
   }
 
   .settings-stat-card span {
-    position: relative;
-    z-index: 1;
     display: block;
     color: #697a8d;
     font-size: 13px;
@@ -814,28 +882,88 @@
   }
 
   .settings-stat-card h4 {
-    position: relative;
-    z-index: 1;
     margin: 10px 0 8px;
     font-weight: 900;
     color: #2b354f;
   }
 
   .settings-stat-card p {
-    position: relative;
-    z-index: 1;
     margin-bottom: 0;
     color: #697a8d;
     font-weight: 600;
   }
 
-  .settings-card {
-    overflow: hidden;
-    position: relative;
+  .settings-stat-card:hover span,
+  .settings-reveal.is-visible.settings-stat-card:hover span {
+    color: #344fa5;
   }
 
-  .settings-card:hover {
-    box-shadow: 0 24px 65px rgba(67, 89, 113, .14);
+  .settings-stat-card:hover h4,
+  .settings-reveal.is-visible.settings-stat-card:hover h4 {
+    color: #17384d;
+  }
+
+  .settings-stat-card:hover p,
+  .settings-reveal.is-visible.settings-stat-card:hover p {
+    color: #4f6075;
+  }
+
+  .integration-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(52, 79, 165, .10);
+    color: #344fa5;
+    font-size: 28px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .40);
+  }
+
+  .integration-card:hover .integration-icon,
+  .settings-reveal.is-visible.integration-card:hover .integration-icon {
+    transform: rotate(-7deg) scale(1.12);
+    background: linear-gradient(135deg, #344fa5, #233b93);
+    color: #fff;
+    box-shadow: 0 14px 28px rgba(52, 79, 165, .25);
+  }
+
+  .integration-card h6 {
+    font-weight: 900;
+    color: #2b354f;
+    margin-bottom: 16px;
+  }
+
+  .integration-card p {
+    margin-bottom: 7px;
+    color: #697a8d;
+    font-weight: 700;
+  }
+
+  .integration-card:hover h6,
+  .settings-reveal.is-visible.integration-card:hover h6 {
+    color: #17384d;
+  }
+
+  .integration-card:hover p,
+  .settings-reveal.is-visible.integration-card:hover p {
+    color: #4f6075;
+  }
+
+  .integration-card a {
+    position: relative;
+    z-index: 3;
+    border-radius: 14px;
+    font-weight: 900;
+    padding: 7px 13px;
+    background: rgba(255, 255, 255, .82);
+  }
+
+  .integration-card a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(52, 79, 165, .16);
   }
 
   .settings-dirty-badge {
@@ -1079,72 +1207,6 @@
     font-weight: 650;
   }
 
-  .integration-card {
-    position: relative;
-    overflow: hidden;
-    padding: 24px;
-    height: 100%;
-  }
-
-  .integration-card::before {
-    content: '';
-    position: absolute;
-    width: 130px;
-    height: 130px;
-    right: -70px;
-    top: -70px;
-    border-radius: 999px;
-    background: rgba(52, 79, 165, .08);
-  }
-
-  .integration-card:hover {
-    transform: translateY(-7px);
-    border-color: rgba(52, 79, 165, .22);
-    box-shadow: 0 24px 52px rgba(52, 79, 165, .13);
-  }
-
-  .integration-icon {
-    position: relative;
-    z-index: 1;
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(52, 79, 165, .10);
-    color: #344fa5;
-    font-size: 28px;
-    margin-bottom: 16px;
-  }
-
-  .integration-card:hover .integration-icon {
-    transform: rotate(-7deg) scale(1.07);
-    background: rgba(52, 79, 165, .16);
-  }
-
-  .integration-card h6 {
-    position: relative;
-    z-index: 1;
-    font-weight: 900;
-    color: #2b354f;
-  }
-
-  .integration-card p {
-    position: relative;
-    z-index: 1;
-    margin-bottom: 6px;
-    color: #697a8d;
-    font-weight: 600;
-  }
-
-  .integration-card a {
-    position: relative;
-    z-index: 1;
-    border-radius: 12px;
-    font-weight: 800;
-  }
-
   .settings-footer-actions {
     display: flex;
     justify-content: flex-end;
@@ -1200,6 +1262,17 @@
   .settings-reveal.is-visible {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  .settings-reveal.is-visible.settings-stat-card:hover,
+  .settings-reveal.is-visible.integration-card:hover {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.018);
+  }
+
+  .settings-reveal.is-visible.settings-stat-card.is-tilting,
+  .settings-reveal.is-visible.integration-card.is-tilting {
+    opacity: 1;
   }
 
   @media (max-width: 991.98px) {
@@ -1295,6 +1368,40 @@
       revealObserver.observe(element);
     });
 
+    const addTiltEffect = function (selector) {
+      const cards = settingsPage.querySelectorAll(selector);
+
+      cards.forEach(function (card) {
+        card.addEventListener('mousemove', function (event) {
+          const rect = card.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+
+          const rotateX = ((y - centerY) / centerY) * -3;
+          const rotateY = ((x - centerX) / centerX) * 3;
+
+          card.classList.add('is-tilting');
+          card.style.transform =
+            'translateY(-10px) scale(1.018) rotateX(' +
+            rotateX +
+            'deg) rotateY(' +
+            rotateY +
+            'deg)';
+        });
+
+        card.addEventListener('mouseleave', function () {
+          card.classList.remove('is-tilting');
+          card.style.transform = '';
+        });
+      });
+    };
+
+    addTiltEffect('.settings-stat-card');
+    addTiltEffect('.integration-card');
+
     const markDirty = function () {
       if (dirtyBadge) {
         dirtyBadge.classList.add('show');
@@ -1314,23 +1421,32 @@
       input.addEventListener('change', function () {
         const file = this.files && this.files[0];
 
-        if (!file) {
-          return;
-        }
+        if (!file) return;
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+        const allowedTypes = [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/jpg'
+        ];
 
         if (!allowedTypes.includes(file.type)) {
           alert('Format gambar harus JPG, PNG, atau WEBP.');
           this.value = '';
-          preview.innerHTML = '<i class="' + fallbackIconClass + '"></i><span>' + fallbackText + '</span>';
+          preview.innerHTML =
+            '<i class="' +
+            fallbackIconClass +
+            '"></i><span>' +
+            fallbackText +
+            '</span>';
           return;
         }
 
         const reader = new FileReader();
 
         reader.onload = function (event) {
-          preview.innerHTML = '<img src="' + event.target.result + '" alt="Preview">';
+          preview.innerHTML =
+            '<img src="' + event.target.result + '" alt="Preview">';
         };
 
         reader.readAsDataURL(file);
@@ -1359,7 +1475,8 @@
         const preview = document.getElementById('studioLogoPreview');
 
         if (this.checked && preview) {
-          preview.innerHTML = '<i class="bx bx-trash"></i><span>Logo akan dihapus saat disimpan</span>';
+          preview.innerHTML =
+            '<i class="bx bx-trash"></i><span>Logo akan dihapus saat disimpan</span>';
         }
       });
     }
@@ -1369,7 +1486,8 @@
         const preview = document.getElementById('clientBannerPreview');
 
         if (this.checked && preview) {
-          preview.innerHTML = '<i class="bx bx-trash"></i><span>Banner akan dihapus saat disimpan</span>';
+          preview.innerHTML =
+            '<i class="bx bx-trash"></i><span>Banner akan dihapus saat disimpan</span>';
         }
       });
     }

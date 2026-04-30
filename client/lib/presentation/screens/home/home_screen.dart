@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/app_setting_model.dart';
 import '../../../data/models/package_model.dart';
 import '../../../data/models/public_review_model.dart';
+import '../../../data/providers/app_setting_provider.dart';
 import '../../../data/providers/auth_provider.dart';
 import '../../../data/providers/client_notification_provider.dart';
 import '../../../data/providers/package_provider.dart';
@@ -37,21 +38,22 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AppSettingService _appSettingService = AppSettingService();
 
-  late Future<AppSettingModel> _settingsFuture;
   late Future<List<PublicReviewModel>> _reviewsFuture;
 
   @override
   void initState() {
     super.initState();
 
-    _settingsFuture = _appSettingService.getAppSettings();
     _reviewsFuture = _appSettingService.getPublicReviews();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appSettingProvider = context.read<AppSettingProvider>();
       final packageProvider = context.read<PackageProvider>();
+      final notificationProvider = context.read<ClientNotificationProvider>();
 
+      appSettingProvider.fetchSettings();
       packageProvider.fetchAll(forceRefresh: packageProvider.packages.isEmpty);
-      context.read<ClientNotificationProvider>().fetchNotifications();
+      notificationProvider.fetchNotifications();
     });
   }
 
@@ -79,20 +81,22 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Klien';
   }
 
-  Future<void> _refresh(
-    PackageProvider packageProvider,
-    ClientNotificationProvider notificationProvider,
-  ) async {
+  Future<void> _refresh({
+    required AppSettingProvider appSettingProvider,
+    required PackageProvider packageProvider,
+    required ClientNotificationProvider notificationProvider,
+  }) async {
+    final newReviewsFuture = _appSettingService.getPublicReviews();
+
     setState(() {
-      _settingsFuture = _appSettingService.getAppSettings();
-      _reviewsFuture = _appSettingService.getPublicReviews();
+      _reviewsFuture = newReviewsFuture;
     });
 
     await Future.wait<Object?>([
+      appSettingProvider.refresh(),
       packageProvider.refreshAll(),
       notificationProvider.refresh(),
-      _settingsFuture,
-      _reviewsFuture,
+      newReviewsFuture,
     ]);
   }
 
@@ -142,9 +146,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appSettingProvider = context.watch<AppSettingProvider>();
     final auth = context.watch<AuthProvider>();
     final packageProvider = context.watch<PackageProvider>();
     final notificationProvider = context.watch<ClientNotificationProvider>();
+
+    final setting = appSettingProvider.setting;
 
     return SafeArea(
       child: Container(
@@ -152,167 +159,187 @@ class _HomeScreenState extends State<HomeScreen> {
         child: RefreshIndicator(
           color: AppColors.welcomeBlueDark,
           backgroundColor: AppColors.welcomeCardLight,
-          onRefresh: () => _refresh(packageProvider, notificationProvider),
-          child: FutureBuilder<AppSettingModel>(
-            future: _settingsFuture,
-            builder: (context, snapshot) {
-              final setting = snapshot.data ?? AppSettingModel.fallback();
+          onRefresh: () => _refresh(
+            appSettingProvider: appSettingProvider,
+            packageProvider: packageProvider,
+            notificationProvider: notificationProvider,
+          ),
+          child: _buildContent(
+            context: context,
+            setting: setting,
+            auth: auth,
+            packageProvider: packageProvider,
+            notificationProvider: notificationProvider,
+          ),
+        ),
+      ),
+    );
+  }
 
-              if (setting.system.maintenanceMode) {
-                return ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    const SizedBox(height: 120),
-                    _MaintenanceCard(setting: setting),
-                  ],
-                );
+  Widget _buildContent({
+    required BuildContext context,
+    required AppSettingModel setting,
+    required AuthProvider auth,
+    required PackageProvider packageProvider,
+    required ClientNotificationProvider notificationProvider,
+  }) {
+    if (setting.system.maintenanceMode) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          const SizedBox(height: 120),
+          _MaintenanceCard(setting: setting),
+        ],
+      );
+    }
+
+    final activePackages = packageProvider.packages
+        .where((item) => item.isActive)
+        .toList();
+
+    final promoPackages = activePackages
+        .where((item) => item.hasDiscount)
+        .toList();
+
+    final portfolioPackages = activePackages
+        .where(
+          (item) => item.portfolio.isNotEmpty || item.coverImage.isNotEmpty,
+        )
+        .toList();
+
+    final popularPackages = _popularPackages(activePackages);
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 118),
+      children: [
+        ClientHomeHeader(
+          setting: setting,
+          clientName: _clientName(auth),
+          unreadNotificationCount: notificationProvider.unreadCount,
+          onNotificationPressed: _openNotifications,
+          onBookingPressed: widget.onOpenBooking,
+          onSupportPressed: setting.clientHome.showSupportContact
+              ? () => _openContact(context)
+              : null,
+        ),
+
+        const SizedBox(height: 22),
+
+        if (packageProvider.isLoading && activePackages.isEmpty)
+          const _LoadingBanner()
+        else if (promoPackages.isEmpty)
+          _PromoFallbackBanner(setting: setting, onTap: widget.onOpenPackages)
+        else
+          _PromoBannerList(
+            packages: promoPackages,
+            portfolioPackages: portfolioPackages,
+            formatCurrency: formatCurrency,
+            onDetail: _openPackageDetail,
+          ),
+
+        const SizedBox(height: 26),
+
+        const _SectionTitle(title: 'Kategori'),
+
+        const SizedBox(height: 12),
+
+        _CategoryScroller(
+          packages: activePackages,
+          onTapAll: widget.onOpenPackages,
+          onTapCategory: widget.onOpenPackageCategory,
+        ),
+
+        const SizedBox(height: 18),
+
+        _SearchLikeBox(onTap: widget.onOpenPackages),
+
+        if (setting.clientHome.showPopularPackages) ...[
+          const SizedBox(height: 26),
+          const _SectionTitle(title: 'Paket Populer'),
+          const SizedBox(height: 12),
+
+          if (packageProvider.isLoading && activePackages.isEmpty)
+            const SizedBox(
+              height: 236,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.welcomeBlueDark,
+                ),
+              ),
+            )
+          else if (popularPackages.isEmpty)
+            const _EmptyCard(
+              icon: Icons.inventory_2_outlined,
+              title: 'Paket belum tersedia',
+              subtitle:
+                  'Paket aktif akan muncul setelah admin mengaktifkan paket layanan.',
+            )
+          else
+            _PopularPackageList(
+              packages: popularPackages,
+              formatCurrency: formatCurrency,
+              onDetail: _openPackageDetail,
+              onBooking: _openBooking,
+            ),
+        ],
+
+        const SizedBox(height: 28),
+
+        const _SectionTitle(title: 'Galeri Studio'),
+
+        const SizedBox(height: 12),
+
+        if (packageProvider.isLoading && activePackages.isEmpty)
+          const SizedBox(
+            height: 180,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppColors.welcomeBlueDark,
+              ),
+            ),
+          )
+        else if (portfolioPackages.isEmpty)
+          const _EmptyCard(
+            icon: Icons.photo_library_outlined,
+            title: 'Portofolio belum tersedia',
+            subtitle:
+                'Gambar portofolio akan muncul setelah admin mengisi foto paket.',
+          )
+        else
+          _PortfolioGrid(
+            packages: portfolioPackages.take(4).toList(),
+            onDetail: _openPackageDetail,
+          ),
+
+        if (setting.clientHome.showClientReviews) ...[
+          const SizedBox(height: 28),
+          FutureBuilder<List<PublicReviewModel>>(
+            future: _reviewsFuture,
+            builder: (context, reviewSnapshot) {
+              final reviews = reviewSnapshot.data ?? [];
+
+              if (reviewSnapshot.connectionState == ConnectionState.waiting) {
+                return const _ReviewLoadingCard();
               }
 
-              final activePackages = packageProvider.packages
-                  .where((item) => item.isActive)
-                  .toList();
+              if (reviews.isEmpty) {
+                return const SizedBox.shrink();
+              }
 
-              final promoPackages = activePackages
-                  .where((item) => item.hasDiscount)
-                  .toList();
-
-              final portfolioPackages = activePackages
-                  .where((item) => item.portfolio.isNotEmpty)
-                  .toList();
-
-              final popularPackages = _popularPackages(activePackages);
-
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 118),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClientHomeHeader(
-                    setting: setting,
-                    clientName: _clientName(auth),
-                    unreadNotificationCount: notificationProvider.unreadCount,
-                    onNotificationPressed: _openNotifications,
-                    onBookingPressed: widget.onOpenBooking,
-                    onSupportPressed: setting.clientHome.showSupportContact
-                        ? () => _openContact(context)
-                        : null,
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  if (packageProvider.isLoading && activePackages.isEmpty)
-                    const _LoadingBanner()
-                  else if (promoPackages.isEmpty)
-                    _PromoFallbackBanner(onTap: widget.onOpenPackages)
-                  else
-                    _PromoBannerList(
-                      packages: promoPackages,
-                      portfolioPackages: portfolioPackages,
-                      formatCurrency: formatCurrency,
-                      onDetail: _openPackageDetail,
-                    ),
-
-                  const SizedBox(height: 26),
-
-                  _SectionTitle(title: 'Kategori'),
-
+                  const _SectionTitle(title: 'Review Klien'),
                   const SizedBox(height: 12),
-
-                  _CategoryScroller(
-                    packages: activePackages,
-                    onTapAll: widget.onOpenPackages,
-                    onTapCategory: widget.onOpenPackageCategory,
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _SearchLikeBox(onTap: widget.onOpenPackages),
-
-                  const SizedBox(height: 26),
-
-                  _SectionTitle(title: 'Paket Populer'),
-
-                  const SizedBox(height: 12),
-
-                  if (packageProvider.isLoading && activePackages.isEmpty)
-                    const SizedBox(
-                      height: 236,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.welcomeBlueDark,
-                        ),
-                      ),
-                    )
-                  else if (popularPackages.isEmpty)
-                    const _EmptyCard(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'Paket belum tersedia',
-                      subtitle:
-                          'Paket aktif akan muncul setelah admin mengaktifkan paket layanan.',
-                    )
-                  else
-                    _PopularPackageList(
-                      packages: popularPackages,
-                      formatCurrency: formatCurrency,
-                      onDetail: _openPackageDetail,
-                      onBooking: _openBooking,
-                    ),
-
-                  const SizedBox(height: 28),
-
-                  _SectionTitle(title: 'Galeri Studio'),
-
-                  const SizedBox(height: 12),
-
-                  if (packageProvider.isLoading && activePackages.isEmpty)
-                    const SizedBox(
-                      height: 180,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.welcomeBlueDark,
-                        ),
-                      ),
-                    )
-                  else if (portfolioPackages.isEmpty)
-                    const _EmptyCard(
-                      icon: Icons.photo_library_outlined,
-                      title: 'Portofolio belum tersedia',
-                      subtitle:
-                          'Gambar portofolio akan muncul setelah admin mengisi foto paket.',
-                    )
-                  else
-                    _PortfolioGrid(
-                      packages: portfolioPackages.take(4).toList(),
-                      onDetail: _openPackageDetail,
-                    ),
-
-                  const SizedBox(height: 28),
-
-                  FutureBuilder<List<PublicReviewModel>>(
-                    future: _reviewsFuture,
-                    builder: (context, reviewSnapshot) {
-                      final reviews = reviewSnapshot.data ?? [];
-
-                      if (reviews.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(title: 'Review Klien'),
-                          const SizedBox(height: 12),
-                          _ReviewList(reviews: reviews.take(5).toList()),
-                        ],
-                      );
-                    },
-                  ),
+                  _ReviewList(reviews: reviews.take(5).toList()),
                 ],
               );
             },
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
 }
@@ -339,6 +366,42 @@ class _SearchLikeBox extends StatelessWidget {
               color: AppColors.welcomeBlueDark.withOpacity(0.10),
               blurRadius: 18,
               offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search_rounded,
+              color: AppColors.welcomeBlueDark.withOpacity(0.76),
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Cari paket foto, kategori, atau promo studio',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.welcomeBlueDark.withOpacity(0.62),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 31,
+              height: 31,
+              decoration: const BoxDecoration(
+                color: AppColors.welcomeBlueDark,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
           ],
         ),
@@ -406,6 +469,10 @@ class _PromoBannerCard extends StatelessWidget {
   });
 
   String _portfolioImage() {
+    if (item.coverImage.isNotEmpty) {
+      return item.coverImage;
+    }
+
     if (item.portfolio.isNotEmpty) {
       return item.portfolio.first;
     }
@@ -413,6 +480,10 @@ class _PromoBannerCard extends StatelessWidget {
     if (portfolioPackages.isNotEmpty) {
       final safeIndex = portfolioIndex % portfolioPackages.length;
       final package = portfolioPackages[safeIndex];
+
+      if (package.coverImage.isNotEmpty) {
+        return package.coverImage;
+      }
 
       if (package.portfolio.isNotEmpty) {
         return package.portfolio.first;
@@ -638,12 +709,17 @@ class _PromoBannerCard extends StatelessWidget {
 }
 
 class _PromoFallbackBanner extends StatelessWidget {
+  final AppSettingModel setting;
   final VoidCallback onTap;
 
-  const _PromoFallbackBanner({required this.onTap});
+  const _PromoFallbackBanner({required this.setting, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final studioName = setting.studio.name.trim().isNotEmpty
+        ? setting.studio.name.trim()
+        : 'MONOFRAME STUDIO';
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(28),
@@ -676,6 +752,7 @@ class _PromoFallbackBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
+                  constraints: const BoxConstraints(maxWidth: 190),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 5,
@@ -684,9 +761,11 @@ class _PromoFallbackBanner extends StatelessWidget {
                     color: Colors.white.withOpacity(0.14),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Text(
-                    'MONOFRAME STUDIO',
-                    style: TextStyle(
+                  child: Text(
+                    studioName.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
                       letterSpacing: 1,
@@ -706,7 +785,9 @@ class _PromoFallbackBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Pilih paket, tentukan jadwal, dan pantau progres langsung dari aplikasi.',
+                  setting.clientHome.subtitle.isNotEmpty
+                      ? setting.clientHome.subtitle
+                      : 'Pilih paket, tentukan jadwal, dan pantau progres langsung dari aplikasi.',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1104,6 +1185,12 @@ class _PackageCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = item.coverImage.isNotEmpty
+        ? item.coverImage
+        : item.portfolio.isNotEmpty
+        ? item.portfolio.first
+        : '';
+
     return Container(
       height: 112,
       decoration: BoxDecoration(
@@ -1114,9 +1201,9 @@ class _PackageCover extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (item.coverImage.isNotEmpty)
+          if (imageUrl.isNotEmpty)
             Image.network(
-              item.coverImage,
+              imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const _PackageImageFallback(),
             )
@@ -1202,6 +1289,12 @@ class _PortfolioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = item.coverImage.isNotEmpty
+        ? item.coverImage
+        : item.portfolio.isNotEmpty
+        ? item.portfolio.first
+        : '';
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(26),
@@ -1221,11 +1314,14 @@ class _PortfolioCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              item.coverImage,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _PackageImageFallback(),
-            ),
+            if (imageUrl.isNotEmpty)
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const _PackageImageFallback(),
+              )
+            else
+              const _PackageImageFallback(),
 
             DecoratedBox(
               decoration: BoxDecoration(
@@ -1403,6 +1499,26 @@ class _ReviewList extends StatelessWidget {
   }
 }
 
+class _ReviewLoadingCard extends StatelessWidget {
+  const _ReviewLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 110,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: AppColors.welcomeCardGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.72)),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: AppColors.welcomeBlueDark),
+      ),
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   final String title;
   final String? actionText;
@@ -1457,6 +1573,10 @@ class _MaintenanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final studioName = setting.studio.name.trim().isNotEmpty
+        ? setting.studio.name.trim()
+        : 'Monoframe Studio';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -1474,7 +1594,7 @@ class _MaintenanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            setting.studio.name,
+            studioName,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.welcomeBlueDark,

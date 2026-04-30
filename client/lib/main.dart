@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
+import 'data/providers/app_setting_provider.dart';
 import 'data/providers/auth_provider.dart';
 import 'data/providers/package_provider.dart';
 import 'data/providers/booking_provider.dart';
@@ -33,6 +34,7 @@ class MonoframeClientApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AppSettingProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PackageProvider()),
         ChangeNotifierProvider(create: (_) => BookingProvider()),
