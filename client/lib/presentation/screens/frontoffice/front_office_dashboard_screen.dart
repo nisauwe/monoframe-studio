@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/providers/auth_provider.dart';
 import '../../../data/providers/front_office_provider.dart';
-import '../auth/login_screen.dart';
+import '../auth/auth_welcome_screen.dart';
 import 'front_office_manual_booking_screen.dart';
 
 class FrontOfficeDashboardScreen extends StatefulWidget {
@@ -34,7 +34,7 @@ class _FrontOfficeDashboardScreenState
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const AuthWelcomeScreen()),
       (route) => false,
     );
   }
@@ -102,6 +102,7 @@ class _FrontOfficeDashboardScreenState
                 name: auth.user?.name ?? 'Front Office',
                 onLogout: () => _logout(context),
               ),
+
               const SizedBox(height: 14),
 
               _DashboardHero(
@@ -118,11 +119,12 @@ class _FrontOfficeDashboardScreenState
               if (provider.isLoading && finance == null)
                 const _LoadingCard()
               else ...[
-                _SectionTitle(
+                const _SectionTitle(
                   title: 'Ringkasan Operasional',
                   subtitle: 'Pantau pekerjaan Front Office hari ini',
                   trailingText: 'Live',
                 ),
+
                 const SizedBox(height: 12),
 
                 _PriorityCard(
@@ -142,10 +144,11 @@ class _FrontOfficeDashboardScreenState
 
                 const SizedBox(height: 20),
 
-                _SectionTitle(
+                const _SectionTitle(
                   title: 'Aksi Cepat',
                   subtitle: 'Shortcut pekerjaan yang paling sering dipakai',
                 ),
+
                 const SizedBox(height: 12),
 
                 _QuickBookingCard(
@@ -161,10 +164,11 @@ class _FrontOfficeDashboardScreenState
 
                 const SizedBox(height: 20),
 
-                _SectionTitle(
+                const _SectionTitle(
                   title: 'Keuangan Studio',
                   subtitle: 'Pemasukan, pengeluaran, dan saldo periode ini',
                 ),
+
                 const SizedBox(height: 12),
 
                 _FinanceOverviewCard(
@@ -175,10 +179,11 @@ class _FrontOfficeDashboardScreenState
 
                 const SizedBox(height: 20),
 
-                _SectionTitle(
+                const _SectionTitle(
                   title: 'Aktivitas Terbaru',
                   subtitle: 'Transaksi masuk dan catatan operasional',
                 ),
+
                 const SizedBox(height: 12),
 
                 _RecentActivityTabs(
@@ -241,11 +246,11 @@ class _TopGreetingBar extends StatelessWidget {
     return Row(
       children: [
         Container(
-          height: 44,
-          width: 44,
+          height: 42,
+          width: 42,
           decoration: BoxDecoration(
             gradient: AppColors.welcomeCardGradient,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(15),
             border: Border.all(color: AppColors.white.withOpacity(0.76)),
             boxShadow: [
               BoxShadow(
@@ -258,6 +263,7 @@ class _TopGreetingBar extends StatelessWidget {
           child: const Icon(
             Icons.storefront_rounded,
             color: AppColors.welcomeBlueDark,
+            size: 22,
           ),
         ),
         const SizedBox(width: 12),
@@ -270,7 +276,7 @@ class _TopGreetingBar extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.grey,
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
               const SizedBox(height: 2),
@@ -281,7 +287,7 @@ class _TopGreetingBar extends StatelessWidget {
                 style: const TextStyle(
                   color: AppColors.dark,
                   fontWeight: FontWeight.w900,
-                  fontSize: 18,
+                  fontSize: 16,
                 ),
               ),
             ],
@@ -289,20 +295,21 @@ class _TopGreetingBar extends StatelessWidget {
         ),
         Material(
           color: AppColors.light,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(15),
           child: InkWell(
             onTap: onLogout,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(15),
             child: Container(
-              height: 44,
-              width: 44,
+              height: 42,
+              width: 42,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: AppColors.border),
               ),
               child: const Icon(
                 Icons.logout_rounded,
                 color: AppColors.primaryDark,
+                size: 21,
               ),
             ),
           ),
@@ -331,16 +338,18 @@ class _DashboardHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = name.trim().isEmpty ? 'Front Office' : name.trim();
+
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: AppColors.welcomeDarkGradient,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppColors.welcomeBlueDark.withOpacity(0.22),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+            color: AppColors.welcomeBlueDark.withOpacity(0.20),
+            blurRadius: 24,
+            offset: const Offset(0, 13),
           ),
         ],
       ),
@@ -350,8 +359,8 @@ class _DashboardHero extends StatelessWidget {
             right: -32,
             top: -34,
             child: Container(
-              height: 118,
-              width: 118,
+              height: 112,
+              width: 112,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.white.withOpacity(0.10),
@@ -362,8 +371,8 @@ class _DashboardHero extends StatelessWidget {
             right: 28,
             bottom: -42,
             child: Container(
-              height: 108,
-              width: 108,
+              height: 104,
+              width: 104,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.white.withOpacity(0.08),
@@ -371,7 +380,7 @@ class _DashboardHero extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -380,27 +389,37 @@ class _DashboardHero extends StatelessWidget {
                   text: 'Monoframe Studio',
                   dateText: shortDateLabel,
                 ),
-                const SizedBox(height: 22),
+
+                const SizedBox(height: 18),
+
                 Text(
-                  'Halo, ${name.trim().isEmpty ? 'Front Office' : name}',
+                  'Halo, $displayName',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.white,
-                    fontSize: 26,
-                    height: 1.15,
+                    fontSize: 22,
+                    height: 1.12,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(height: 8),
+
+                const SizedBox(height: 7),
+
                 Text(
                   dateLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.white.withOpacity(0.78),
                     fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
                   ),
                 ),
-                const SizedBox(height: 18),
+
+                const SizedBox(height: 15),
+
                 Row(
                   children: [
                     Expanded(
@@ -410,7 +429,7 @@ class _DashboardHero extends StatelessWidget {
                         value: '$assignCount',
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 9),
                     Expanded(
                       child: _HeroMetricPill(
                         icon: Icons.event_available_rounded,
@@ -420,7 +439,9 @@ class _DashboardHero extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+
+                const SizedBox(height: 9),
+
                 _HeroBalanceStrip(balance: balance),
               ],
             ),
@@ -447,28 +468,30 @@ class _HeroStatusPill extends StatelessWidget {
     return Row(
       children: [
         Container(
-          height: 36,
-          width: 36,
+          height: 32,
+          width: 32,
           decoration: BoxDecoration(
             color: AppColors.white.withOpacity(0.16),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.white.withOpacity(0.18)),
           ),
-          child: Icon(icon, color: AppColors.white, size: 19),
+          child: Icon(icon, color: AppColors.white, size: 17),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 9),
         Expanded(
           child: Text(
             text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.white,
               fontWeight: FontWeight.w900,
-              fontSize: 15,
+              fontSize: 13.5,
             ),
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
           decoration: BoxDecoration(
             color: AppColors.white.withOpacity(0.14),
             borderRadius: BorderRadius.circular(99),
@@ -479,7 +502,7 @@ class _HeroStatusPill extends StatelessWidget {
             style: const TextStyle(
               color: AppColors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 11,
+              fontSize: 10,
             ),
           ),
         ),
@@ -502,32 +525,36 @@ class _HeroMetricPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.white.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.white.withOpacity(0.18)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.white, size: 20),
-          const SizedBox(width: 8),
+          Icon(icon, color: AppColors.white, size: 17),
+          const SizedBox(width: 7),
           Expanded(
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppColors.white.withOpacity(0.80),
+                color: AppColors.white.withOpacity(0.82),
                 fontWeight: FontWeight.w700,
-                fontSize: 12,
+                fontSize: 10.8,
               ),
             ),
           ),
+          const SizedBox(width: 5),
           Text(
             value,
             style: const TextStyle(
               color: AppColors.white,
               fontWeight: FontWeight.w900,
-              fontSize: 18,
+              fontSize: 15.5,
             ),
           ),
         ],
@@ -544,10 +571,11 @@ class _HeroBalanceStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
         color: AppColors.white.withOpacity(0.13),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.white.withOpacity(0.18)),
       ),
       child: Row(
@@ -555,15 +583,15 @@ class _HeroBalanceStrip extends StatelessWidget {
           const Icon(
             Icons.account_balance_wallet_rounded,
             color: AppColors.white,
-            size: 20,
+            size: 17,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
           Text(
             'Saldo periode',
             style: TextStyle(
-              color: AppColors.white.withOpacity(0.80),
+              color: AppColors.white.withOpacity(0.82),
               fontWeight: FontWeight.w700,
-              fontSize: 12,
+              fontSize: 10.8,
             ),
           ),
           const Spacer(),
@@ -576,6 +604,7 @@ class _HeroBalanceStrip extends StatelessWidget {
               style: const TextStyle(
                 color: AppColors.white,
                 fontWeight: FontWeight.w900,
+                fontSize: 12.5,
               ),
             ),
           ),
@@ -601,14 +630,14 @@ class _SectionTitle extends StatelessWidget {
     return Row(
       children: [
         Container(
-          height: 34,
+          height: 30,
           width: 5,
           decoration: BoxDecoration(
             gradient: AppColors.welcomeDarkGradient,
             borderRadius: BorderRadius.circular(99),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 9),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,7 +646,7 @@ class _SectionTitle extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   color: AppColors.dark,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -626,7 +655,7 @@ class _SectionTitle extends StatelessWidget {
                 subtitle,
                 style: const TextStyle(
                   color: AppColors.grey,
-                  fontSize: 12,
+                  fontSize: 11.2,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -635,7 +664,7 @@ class _SectionTitle extends StatelessWidget {
         ),
         if (trailingText != null)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.primarySoft,
               borderRadius: BorderRadius.circular(99),
@@ -644,20 +673,20 @@ class _SectionTitle extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  height: 7,
-                  width: 7,
+                  height: 6,
+                  width: 6,
                   decoration: const BoxDecoration(
                     color: AppColors.success,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 Text(
                   trailingText!,
                   style: const TextStyle(
                     color: AppColors.primaryDark,
                     fontWeight: FontWeight.w900,
-                    fontSize: 11,
+                    fontSize: 10.3,
                   ),
                 ),
               ],
@@ -684,7 +713,7 @@ class _PriorityCard extends StatelessWidget {
     final hasPriority = assignCount > 0 || printCount > 0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: hasPriority
             ? const LinearGradient(
@@ -693,24 +722,24 @@ class _PriorityCard extends StatelessWidget {
                 colors: [Color(0xFFFFFBEB), Color(0xFFEAF5FA)],
               )
             : AppColors.welcomeCardGradient,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.white.withOpacity(0.74)),
         boxShadow: [
           BoxShadow(
             color: AppColors.welcomeBlueDark.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            height: 58,
-            width: 58,
+            height: 50,
+            width: 50,
             decoration: BoxDecoration(
               color: AppColors.white.withOpacity(0.74),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(19),
               border: Border.all(color: AppColors.white),
             ),
             child: Icon(
@@ -718,10 +747,10 @@ class _PriorityCard extends StatelessWidget {
                   ? Icons.notifications_active_rounded
                   : Icons.check_circle_rounded,
               color: hasPriority ? AppColors.warning : AppColors.success,
-              size: 30,
+              size: 27,
             ),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,10 +762,10 @@ class _PriorityCard extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.dark,
                     fontWeight: FontWeight.w900,
-                    fontSize: 16,
+                    fontSize: 14.2,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   hasPriority
                       ? '$assignCount booking perlu assign, $printCount pesanan cetak perlu dipantau.'
@@ -745,107 +774,11 @@ class _PriorityCard extends StatelessWidget {
                     color: AppColors.grey,
                     height: 1.35,
                     fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final Color background;
-
-  const _KpiCard({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.background,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.light,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.welcomeBlueDark.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -10,
-            top: -8,
-            child: Container(
-              height: 58,
-              width: 58,
-              decoration: BoxDecoration(
-                color: background,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 41,
-                width: 41,
-                decoration: BoxDecoration(
-                  color: background,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const Spacer(),
-              Text(
-                value,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 27,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.dark,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.grey,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -863,31 +796,31 @@ class _QuickBookingCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: AppColors.welcomeDarkGradient,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
             color: AppColors.welcomeBlueDark.withOpacity(0.16),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(26),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(26),
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(15),
             child: Row(
               children: [
                 Container(
-                  height: 56,
-                  width: 56,
+                  height: 48,
+                  width: 48,
                   decoration: BoxDecoration(
                     color: AppColors.white.withOpacity(0.17),
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(19),
                     border: Border.all(
                       color: AppColors.white.withOpacity(0.20),
                     ),
@@ -895,10 +828,10 @@ class _QuickBookingCard extends StatelessWidget {
                   child: const Icon(
                     Icons.add_circle_outline_rounded,
                     color: AppColors.white,
-                    size: 30,
+                    size: 27,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -908,24 +841,25 @@ class _QuickBookingCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.white,
                           fontWeight: FontWeight.w900,
-                          fontSize: 17,
+                          fontSize: 15.2,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 4),
                       Text(
                         'Input booking klien offline langsung dari front office.',
                         style: TextStyle(
                           color: AppColors.white.withOpacity(0.78),
                           fontWeight: FontWeight.w600,
-                          height: 1.35,
+                          fontSize: 11.5,
+                          height: 1.3,
                         ),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  height: 38,
-                  width: 38,
+                  height: 34,
+                  width: 34,
                   decoration: BoxDecoration(
                     color: AppColors.white.withOpacity(0.16),
                     shape: BoxShape.circle,
@@ -933,6 +867,7 @@ class _QuickBookingCard extends StatelessWidget {
                   child: const Icon(
                     Icons.arrow_forward_rounded,
                     color: AppColors.white,
+                    size: 20,
                   ),
                 ),
               ],
@@ -1025,11 +960,11 @@ class _MiniActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 92),
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: 82),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.light,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
@@ -1042,15 +977,15 @@ class _MiniActionCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            height: 54,
-            width: 54,
+            height: 44,
+            width: 44,
             decoration: BoxDecoration(
               color: color.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(17),
             ),
-            child: Icon(icon, color: color, size: 28),
+            child: Icon(icon, color: color, size: 23),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1058,16 +993,16 @@ class _MiniActionCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.dark,
                     fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                    height: 1.1,
+                    fontSize: 13.2,
+                    height: 1.08,
                   ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 5),
                 Text(
                   subtitle,
                   maxLines: 1,
@@ -1075,8 +1010,8 @@ class _MiniActionCard extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.grey,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    height: 1.1,
+                    fontSize: 11,
+                    height: 1.08,
                   ),
                 ),
               ],
@@ -1105,13 +1040,13 @@ class _FinanceOverviewCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.light,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: AppColors.welcomeBlueDark.withOpacity(0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -1119,26 +1054,27 @@ class _FinanceOverviewCard extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(15),
             decoration: const BoxDecoration(
               gradient: AppColors.welcomeCardGradient,
             ),
             child: Row(
               children: [
                 Container(
-                  height: 48,
-                  width: 48,
+                  height: 44,
+                  width: 44,
                   decoration: BoxDecoration(
                     color: AppColors.white.withOpacity(0.70),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.white),
                   ),
                   child: const Icon(
                     Icons.account_balance_wallet_rounded,
                     color: AppColors.welcomeBlueDark,
+                    size: 22,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 11),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1148,7 +1084,7 @@ class _FinanceOverviewCard extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.grey,
                           fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                          fontSize: 11,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -1159,7 +1095,7 @@ class _FinanceOverviewCard extends StatelessWidget {
                         style: const TextStyle(
                           color: AppColors.welcomeBlueDark,
                           fontWeight: FontWeight.w900,
-                          fontSize: 22,
+                          fontSize: 18,
                         ),
                       ),
                     ],
@@ -1169,7 +1105,7 @@ class _FinanceOverviewCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             child: Row(
               children: [
                 Expanded(
@@ -1214,23 +1150,23 @@ class _FinancePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: color.withOpacity(0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 21),
-          const SizedBox(height: 10),
+          Icon(icon, color: color, size: 19),
+          const SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w800,
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
           const SizedBox(height: 3),
@@ -1238,7 +1174,11 @@ class _FinancePill extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 11.5,
+            ),
           ),
         ],
       ),
@@ -1280,10 +1220,10 @@ class _RecentActivityTabsState extends State<_RecentActivityTabs> {
     final items = _selectedIndex == 0 ? widget.payments : widget.expenses;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: AppColors.light,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -1337,19 +1277,19 @@ class _ActivityTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: active ? AppColors.primaryDark : AppColors.primarySoft,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 11),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: active ? AppColors.white : AppColors.primaryDark,
               fontWeight: FontWeight.w900,
-              fontSize: 12,
+              fontSize: 11.5,
             ),
           ),
         ),
@@ -1367,24 +1307,24 @@ class _ActivityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.lightGrey,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           Container(
-            height: 42,
-            width: 42,
+            height: 38,
+            width: 38,
             decoration: BoxDecoration(
               color: item.color.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(item.icon, color: item.color, size: 21),
+            child: Icon(item.icon, color: item.color, size: 19),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1396,6 +1336,7 @@ class _ActivityTile extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.dark,
                     fontWeight: FontWeight.w900,
+                    fontSize: 12.5,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1406,7 +1347,7 @@ class _ActivityTile extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.grey,
                     fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -1418,7 +1359,7 @@ class _ActivityTile extends StatelessWidget {
             style: TextStyle(
               color: item.color,
               fontWeight: FontWeight.w900,
-              fontSize: 12,
+              fontSize: 11.5,
             ),
           ),
         ],
@@ -1436,22 +1377,27 @@ class _EmptyMiniCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: AppColors.lightGrey,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(17),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, color: AppColors.grey),
-          const SizedBox(width: 10),
+          const Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.grey,
+            size: 20,
+          ),
+          const SizedBox(width: 9),
           Expanded(
             child: Text(
               message,
               style: const TextStyle(
                 color: AppColors.grey,
                 fontWeight: FontWeight.w600,
+                fontSize: 11.5,
               ),
             ),
           ),
@@ -1467,11 +1413,11 @@ class _LoadingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 180,
+      height: 170,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.light,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.border),
       ),
       child: const CircularProgressIndicator(),
@@ -1487,7 +1433,7 @@ class _ErrorBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: AppColors.danger.withOpacity(0.08),
         borderRadius: BorderRadius.circular(18),
@@ -1503,6 +1449,7 @@ class _ErrorBox extends StatelessWidget {
               style: const TextStyle(
                 color: AppColors.danger,
                 fontWeight: FontWeight.w700,
+                fontSize: 12,
               ),
             ),
           ),

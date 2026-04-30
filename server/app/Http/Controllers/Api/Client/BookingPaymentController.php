@@ -26,7 +26,11 @@ class BookingPaymentController extends Controller
             ], 403);
         }
 
-        $booking->load(['package', 'clientUser', 'successfulBookingPayments']);
+        $booking->load([
+            'package',
+            'clientUser',
+            'successfulBookingPayments',
+        ]);
 
         if ($booking->status === 'cancelled') {
             return response()->json([
@@ -67,12 +71,15 @@ class BookingPaymentController extends Controller
         $existingPending = Payment::query()
             ->where('schedule_booking_id', $booking->id)
             ->whereNull('print_order_id')
+            ->where('payment_context', 'booking')
             ->where('payment_stage', $mode)
-            ->whereIn('transaction_status', ['created', 'pending'])
+            ->whereIn('transaction_status', ['created', 'pending', 'authorize'])
             ->latest()
             ->first();
 
         if ($existingPending && $existingPending->snap_token) {
+            $this->keepBookingPaymentStatusWhileWaiting($booking, $mode, $existingPending);
+
             return response()->json([
                 'message' => 'Tagihan pembayaran lama masih aktif.',
                 'token' => $existingPending->snap_token,
@@ -81,6 +88,8 @@ class BookingPaymentController extends Controller
                 'snap_js_url' => $this->snapJsUrl($gateway->environment),
                 'order_id' => $existingPending->order_id,
                 'payment_stage' => $mode,
+                'base_amount' => (int) $existingPending->base_amount,
+                'gross_amount' => (int) $existingPending->gross_amount,
             ]);
         }
 
@@ -95,7 +104,12 @@ class BookingPaymentController extends Controller
             ], 422);
         }
 
-        $orderId = 'BOOK-' . strtoupper($mode) . '-' . now()->format('YmdHis') . '-' . strtoupper(Str::random(6));
+        $orderId = 'BOOK-' .
+            strtoupper($mode) .
+            '-' .
+            now()->format('YmdHis') .
+            '-' .
+            strtoupper(Str::random(6));
 
         Config::$serverKey = $gateway->server_key;
         Config::$clientKey = $gateway->client_key;
@@ -166,11 +180,7 @@ class BookingPaymentController extends Controller
                 ],
             ]);
 
-            $booking->update([
-                'payment_status' => 'unpaid',
-                'payment_order_id' => $orderId,
-                'payment_due_at' => $payment->expired_at,
-            ]);
+            $this->keepBookingPaymentStatusWhileWaiting($booking, $mode, $payment);
 
             PaymentGatewayLog::create([
                 'payment_gateway_id' => $gateway->id,
@@ -216,6 +226,8 @@ class BookingPaymentController extends Controller
 
     private function resolveInvoiceAmount(ScheduleBooking $booking, string $mode): array
     {
+        $booking->loadMissing('package');
+
         $total = (int) $booking->total_booking_amount;
 
         if ($mode === 'dp') {
@@ -236,6 +248,42 @@ class BookingPaymentController extends Controller
             $total,
             'Pelunasan Penuh Booking ' . ($booking->package?->name ?? 'Monoframe'),
         ];
+    }
+
+    private function keepBookingPaymentStatusWhileWaiting(
+        ScheduleBooking $booking,
+        string $mode,
+        Payment $payment
+    ): void {
+        $booking->refresh();
+
+        if ($booking->isFullyPaid()) {
+            $booking->update([
+                'status' => 'confirmed',
+                'payment_status' => 'fully_paid',
+                'payment_order_id' => $payment->order_id,
+                'payment_due_at' => null,
+            ]);
+
+            return;
+        }
+
+        if ($booking->isDpPaid()) {
+            $booking->update([
+                'status' => 'confirmed',
+                'payment_status' => 'partially_paid',
+                'payment_order_id' => $payment->order_id,
+                'payment_due_at' => $payment->expired_at,
+            ]);
+
+            return;
+        }
+
+        $booking->update([
+            'payment_status' => $mode === 'dp' ? 'pending' : 'pending',
+            'payment_order_id' => $payment->order_id,
+            'payment_due_at' => $payment->expired_at,
+        ]);
     }
 
     private function snapJsUrl(string $environment): string

@@ -30,7 +30,10 @@ class _FrontOfficeEditAssignmentScreenState
   @override
   void initState() {
     super.initState();
-    fetchData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchData();
+    });
   }
 
   Future<void> fetchData({bool showLoading = true}) async {
@@ -40,9 +43,7 @@ class _FrontOfficeEditAssignmentScreenState
         errorMessage = null;
       });
     } else {
-      setState(() {
-        errorMessage = null;
-      });
+      setState(() => errorMessage = null);
     }
 
     try {
@@ -105,9 +106,7 @@ class _FrontOfficeEditAssignmentScreenState
       final message = _messageFromDio(e, 'Gagal assign editor');
 
       if (mounted) {
-        setState(() {
-          errorMessage = message;
-        });
+        setState(() => errorMessage = message);
         _showMessage(message);
       }
 
@@ -116,9 +115,7 @@ class _FrontOfficeEditAssignmentScreenState
       final message = _cleanMessage(e.toString());
 
       if (mounted) {
-        setState(() {
-          errorMessage = message;
-        });
+        setState(() => errorMessage = message);
         _showMessage(message);
       }
 
@@ -160,7 +157,7 @@ class _FrontOfficeEditAssignmentScreenState
               ),
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.84,
+                  maxHeight: MediaQuery.of(context).size.height * 0.88,
                 ),
                 decoration: const BoxDecoration(
                   color: AppColors.background,
@@ -174,7 +171,7 @@ class _FrontOfficeEditAssignmentScreenState
                       width: 46,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: _EditAssignPalette.cardDeep,
+                        color: _AssignPalette.cardDeep,
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -182,71 +179,9 @@ class _FrontOfficeEditAssignmentScreenState
 
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 18),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: _EditAssignPalette.darkGradient,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _EditAssignPalette.darkBlue.withOpacity(
-                                0.14,
-                              ),
-                              blurRadius: 18,
-                              offset: const Offset(0, 9),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.16),
-                                borderRadius: BorderRadius.circular(17),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.20),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.auto_fix_high_rounded,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Pilih Editor',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      height: 1.1,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '${_clientName(request)} • ${_packageName(request)}',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.72),
-                                      fontSize: 12.2,
-                                      height: 1.35,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: _AssignEditorSheetHeader(
+                        clientName: _clientName(request),
+                        packageName: _packageName(request),
                       ),
                     ),
 
@@ -257,6 +192,14 @@ class _FrontOfficeEditAssignmentScreenState
                         padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
                         shrinkWrap: true,
                         children: [
+                          const _SheetSectionTitle(
+                            title: 'Daftar Editor',
+                            subtitle:
+                                'Pilih editor yang akan mengerjakan request ini.',
+                          ),
+
+                          const SizedBox(height: 12),
+
                           ...editors.map((rawEditor) {
                             final editor = _asMap(rawEditor);
                             final editorId = _toInt(editor['id']);
@@ -289,7 +232,7 @@ class _FrontOfficeEditAssignmentScreenState
 
                           SizedBox(
                             width: double.infinity,
-                            height: 44,
+                            height: 46,
                             child: ElevatedButton.icon(
                               onPressed:
                                   modalSubmitting || selectedEditorId == null
@@ -323,7 +266,7 @@ class _FrontOfficeEditAssignmentScreenState
                                       height: 17,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: AppColors.white,
                                       ),
                                     )
                                   : const Icon(
@@ -334,18 +277,20 @@ class _FrontOfficeEditAssignmentScreenState
                                 modalSubmitting
                                     ? 'Memproses...'
                                     : 'Assign Editor',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               style: ElevatedButton.styleFrom(
                                 elevation: 0,
-                                backgroundColor: _EditAssignPalette.darkBlue,
-                                foregroundColor: Colors.white,
+                                backgroundColor: _AssignPalette.darkBlue,
+                                foregroundColor: AppColors.white,
                                 disabledBackgroundColor: AppColors.grey
                                     .withOpacity(0.35),
-                                disabledForegroundColor: Colors.white
+                                disabledForegroundColor: AppColors.white
                                     .withOpacity(0.86),
                                 shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                                 textStyle: const TextStyle(
                                   fontSize: 12.5,
@@ -414,6 +359,20 @@ class _FrontOfficeEditAssignmentScreenState
       }
     }
 
+    if (data is Map) {
+      final map = Map<String, dynamic>.from(data);
+
+      if (map['message'] != null) {
+        return _cleanMessage(map['message'].toString());
+      }
+    }
+
+    final message = e.message;
+
+    if (message != null && message.trim().isNotEmpty) {
+      return _cleanMessage(message);
+    }
+
     return _cleanMessage(fallback);
   }
 
@@ -437,35 +396,31 @@ class _FrontOfficeEditAssignmentScreenState
     if (value == null) return 0;
     if (value is int) return value;
     if (value is double) return value.toInt();
+
     return int.tryParse(value.toString()) ?? 0;
   }
 
-  List<dynamic> _selectedFiles(dynamic rawRequest) {
+  List<String> _selectedFiles(dynamic rawRequest) {
     final request = _asMap(rawRequest);
     final files = request['selected_files'];
 
-    if (files is List) return files;
+    if (files is List) {
+      return files.map((item) => item.toString()).toList();
+    }
 
     if (files is String && files.trim().isNotEmpty) {
       try {
         final decoded = jsonDecode(files);
-        if (decoded is List) return decoded;
+
+        if (decoded is List) {
+          return decoded.map((item) => item.toString()).toList();
+        }
       } catch (_) {
         return [files];
       }
     }
 
     return [];
-  }
-
-  String _filesText(dynamic request) {
-    final files = _selectedFiles(request);
-
-    if (files.isEmpty) {
-      return '-';
-    }
-
-    return files.map((item) => item.toString()).join(', ');
   }
 
   String _clientName(dynamic rawRequest) {
@@ -513,11 +468,11 @@ class _FrontOfficeEditAssignmentScreenState
   Color _statusColor(String status) {
     switch (status) {
       case 'submitted':
-        return AppColors.warning;
+        return _AssignPalette.darkBlue;
       case 'assigned':
-        return _EditAssignPalette.midBlue;
+        return _AssignPalette.midBlue;
       case 'in_progress':
-        return _EditAssignPalette.lightBlue;
+        return _AssignPalette.lightBlue;
       case 'completed':
         return AppColors.success;
       default:
@@ -552,9 +507,9 @@ class _FrontOfficeEditAssignmentScreenState
 
     switch (status) {
       case 'submitted':
-        return 'Menunggu Assign Editor';
+        return 'Menunggu Editor';
       case 'assigned':
-        return 'Sudah Dikirim ke Editor';
+        return 'Sudah Di-assign';
       case 'in_progress':
         return 'Sedang Diedit';
       case 'completed':
@@ -575,6 +530,11 @@ class _FrontOfficeEditAssignmentScreenState
     return deadline.toString();
   }
 
+  String _requestNotes(dynamic rawRequest) {
+    final request = _asMap(rawRequest);
+    return request['request_notes']?.toString().trim() ?? '';
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
 
@@ -592,19 +552,18 @@ class _FrontOfficeEditAssignmentScreenState
         label: Text(label),
         selected: selected,
         showCheckmark: false,
-        selectedColor: _EditAssignPalette.darkBlue,
-        backgroundColor: Colors.white,
+        selectedColor: _AssignPalette.darkBlue,
+        backgroundColor: AppColors.light,
         side: BorderSide(
-          color: selected
-              ? _EditAssignPalette.darkBlue
-              : _EditAssignPalette.cardDeep,
+          color: selected ? _AssignPalette.darkBlue : _AssignPalette.cardDeep,
         ),
         labelStyle: TextStyle(
-          color: selected ? Colors.white : _EditAssignPalette.darkBlue,
-          fontSize: 12,
+          color: selected ? AppColors.white : _AssignPalette.darkBlue,
+          fontSize: 11.3,
           fontWeight: FontWeight.w900,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
         onSelected: (_) {
           setState(() => selectedStatus = value);
           fetchData();
@@ -615,20 +574,48 @@ class _FrontOfficeEditAssignmentScreenState
 
   @override
   Widget build(BuildContext context) {
+    final waitingCount = editRequests.where((item) {
+      final request = _asMap(item);
+      return (request['status']?.toString() ?? '') == 'submitted';
+    }).length;
+
+    final assignedCount = editRequests.where((item) {
+      final request = _asMap(item);
+      final status = request['status']?.toString() ?? '';
+      return status == 'assigned' || status == 'in_progress';
+    }).length;
+
+    final completedCount = editRequests.where((item) {
+      final request = _asMap(item);
+      return (request['status']?.toString() ?? '') == 'completed';
+    }).length;
+
     return SafeArea(
       child: Container(
         color: AppColors.background,
         child: RefreshIndicator(
-          color: _EditAssignPalette.darkBlue,
-          backgroundColor: _EditAssignPalette.cardLight,
+          color: _AssignPalette.darkBlue,
+          backgroundColor: _AssignPalette.cardLight,
           onRefresh: () => fetchData(showLoading: false),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 118),
             children: [
-              _EditAssignHeader(totalRequest: editRequests.length),
+              _EditAssignHeader(
+                totalRequest: editRequests.length,
+                waitingCount: waitingCount,
+                assignedCount: assignedCount,
+                completedCount: completedCount,
+              ),
 
               const SizedBox(height: 16),
+
+              const _SectionTitle(
+                title: 'Filter Request',
+                subtitle: 'Pilih status request edit yang ingin dipantau.',
+              ),
+
+              const SizedBox(height: 12),
 
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -645,20 +632,21 @@ class _FrontOfficeEditAssignmentScreenState
 
               const SizedBox(height: 18),
 
+              const _SectionTitle(
+                title: 'Daftar Request Edit',
+                subtitle: 'Assign atau ganti editor untuk request klien.',
+                trailingText: 'Live',
+              ),
+
+              const SizedBox(height: 12),
+
               if (isLoading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 90),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: _EditAssignPalette.darkBlue,
-                    ),
-                  ),
-                )
+                const _LoadingCard()
               else if (errorMessage != null)
                 _ErrorState(message: errorMessage!, onRetry: () => fetchData())
               else if (editRequests.isEmpty)
                 _EmptyEditRequestState(
-                  message: 'Permintaan edit dari klien akan tampil di sini.',
+                  message: 'Request edit dari klien akan tampil di sini.',
                   onRefresh: () => fetchData(),
                 )
               else
@@ -675,10 +663,8 @@ class _FrontOfficeEditAssignmentScreenState
                     child: _EditRequestCard(
                       clientName: _clientName(request),
                       packageName: _packageName(request),
-                      fileCount: selectedFiles.length,
-                      fileText: _filesText(request),
-                      requestNotes:
-                          request['request_notes']?.toString().trim() ?? '',
+                      selectedFiles: selectedFiles,
+                      requestNotes: _requestNotes(request),
                       statusLabel: _statusLabel(request),
                       statusColor: color,
                       statusIcon: _statusIcon(status),
@@ -699,7 +685,7 @@ class _FrontOfficeEditAssignmentScreenState
   }
 }
 
-class _EditAssignPalette {
+class _AssignPalette {
   static const Color darkBlue = Color(0xFF233B93);
   static const Color midBlue = Color(0xFF344FA5);
   static const Color lightBlue = Color(0xFF5E7BDA);
@@ -723,19 +709,27 @@ class _EditAssignPalette {
 
 class _EditAssignHeader extends StatelessWidget {
   final int totalRequest;
+  final int waitingCount;
+  final int assignedCount;
+  final int completedCount;
 
-  const _EditAssignHeader({required this.totalRequest});
+  const _EditAssignHeader({
+    required this.totalRequest,
+    required this.waitingCount,
+    required this.assignedCount,
+    required this.completedCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
-        gradient: _EditAssignPalette.darkGradient,
+        gradient: _AssignPalette.darkGradient,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: _EditAssignPalette.darkBlue.withOpacity(0.16),
+            color: _AssignPalette.darkBlue.withOpacity(0.16),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -744,87 +738,273 @@ class _EditAssignHeader extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            right: -32,
-            top: -34,
+            right: -42,
+            top: -42,
             child: Container(
               width: 118,
               height: 118,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
                 shape: BoxShape.circle,
+                color: AppColors.white.withOpacity(0.10),
               ),
             ),
           ),
           Positioned(
-            right: 28,
-            bottom: -48,
+            right: 34,
+            bottom: -56,
             child: Container(
-              width: 108,
-              height: 108,
+              width: 116,
+              height: 116,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
                 shape: BoxShape.circle,
+                color: AppColors.white.withOpacity(0.07),
+              ),
+            ),
+          ),
+          Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.white.withOpacity(0.20),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.auto_fix_high_rounded,
+                      color: AppColors.white,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Assign Editor',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: 23,
+                            height: 1.1,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          'Kelola request edit dan pilih editor yang bertugas.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.white.withOpacity(0.72),
+                            fontSize: 12.8,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.white.withOpacity(0.18),
+                            ),
+                          ),
+                          child: Text(
+                            '$totalRequest request masuk',
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 15),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _HeaderMetric(
+                      icon: Icons.hourglass_top_rounded,
+                      label: 'Menunggu',
+                      value: '$waitingCount',
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: _HeaderMetric(
+                      icon: Icons.assignment_turned_in_rounded,
+                      label: 'Proses',
+                      value: '$assignedCount',
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: _HeaderMetric(
+                      icon: Icons.check_circle_rounded,
+                      label: 'Selesai',
+                      value: '$completedCount',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderMetric extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _HeaderMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.13),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: AppColors.white.withOpacity(0.20), width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.white, size: 16),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.white.withOpacity(0.88),
+                fontSize: 9.8,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AssignEditorSheetHeader extends StatelessWidget {
+  final String clientName;
+  final String packageName;
+
+  const _AssignEditorSheetHeader({
+    required this.clientName,
+    required this.packageName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: _AssignPalette.darkGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: _AssignPalette.darkBlue.withOpacity(0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -22,
+            top: -28,
+            child: Container(
+              height: 92,
+              width: 92,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.white.withOpacity(0.10),
               ),
             ),
           ),
           Row(
             children: [
-              const _HeaderIcon(),
-              const SizedBox(width: 13),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: AppColors.white.withOpacity(0.20)),
+                ),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  color: AppColors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Assign Editor',
+                      'Pilih Editor',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 23,
+                        color: AppColors.white,
+                        fontSize: 20,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 6),
                     Text(
-                      'Pilih editor untuk mengerjakan permintaan edit foto dari klien.',
+                      '$clientName • $packageName',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.72),
-                        fontSize: 12.8,
+                        color: AppColors.white.withOpacity(0.72),
+                        fontSize: 12.2,
                         height: 1.35,
                         fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.18),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.auto_fix_high_rounded,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 7),
-                          Text(
-                            '$totalRequest permintaan edit',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ],
@@ -838,20 +1018,133 @@ class _EditAssignHeader extends StatelessWidget {
   }
 }
 
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon();
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String? trailingText;
+
+  const _SectionTitle({
+    required this.title,
+    required this.subtitle,
+    this.trailingText,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.16),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.20)),
-      ),
-      child: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 31),
+    return Row(
+      children: [
+        Container(
+          height: 30,
+          width: 5,
+          decoration: BoxDecoration(
+            gradient: _AssignPalette.darkGradient,
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.dark,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppColors.grey,
+                  fontSize: 11.2,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (trailingText != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              color: _AssignPalette.cardLight,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: _AssignPalette.cardDeep),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  height: 6,
+                  width: 6,
+                  decoration: const BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  trailingText!,
+                  style: const TextStyle(
+                    color: _AssignPalette.darkBlue,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SheetSectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SheetSectionTitle({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          height: 28,
+          width: 5,
+          decoration: BoxDecoration(
+            gradient: _AssignPalette.darkGradient,
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: _AssignPalette.darkBlue,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: _AssignPalette.darkBlue.withOpacity(0.55),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -859,8 +1152,7 @@ class _HeaderIcon extends StatelessWidget {
 class _EditRequestCard extends StatelessWidget {
   final String clientName;
   final String packageName;
-  final int fileCount;
-  final String fileText;
+  final List<String> selectedFiles;
   final String requestNotes;
   final String statusLabel;
   final Color statusColor;
@@ -875,8 +1167,7 @@ class _EditRequestCard extends StatelessWidget {
   const _EditRequestCard({
     required this.clientName,
     required this.packageName,
-    required this.fileCount,
-    required this.fileText,
+    required this.selectedFiles,
     required this.requestNotes,
     required this.statusLabel,
     required this.statusColor,
@@ -899,15 +1190,17 @@ class _EditRequestCard extends StatelessWidget {
         ? '-'
         : packageName.trim();
 
+    final hasEditor = editorName.trim().isNotEmpty && editorName != '-';
+
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _EditAssignPalette.cardDeep),
+        border: Border.all(color: _AssignPalette.cardDeep),
         boxShadow: [
           BoxShadow(
-            color: _EditAssignPalette.darkBlue.withOpacity(0.05),
+            color: _AssignPalette.darkBlue.withOpacity(0.05),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -916,7 +1209,6 @@ class _EditRequestCard extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _StatusIconBox(icon: statusIcon, color: statusColor),
               const SizedBox(width: 11),
@@ -929,7 +1221,7 @@ class _EditRequestCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _EditAssignPalette.darkBlue,
+                        color: _AssignPalette.darkBlue,
                         fontSize: 17,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
@@ -941,7 +1233,7 @@ class _EditRequestCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _EditAssignPalette.darkBlue.withOpacity(0.58),
+                        color: _AssignPalette.darkBlue.withOpacity(0.58),
                         fontSize: 11.8,
                         fontWeight: FontWeight.w700,
                       ),
@@ -962,10 +1254,8 @@ class _EditRequestCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _StatusChip(
-                  label: editorName == '-' ? 'Belum Ada Editor' : editorName,
-                  color: editorName == '-'
-                      ? AppColors.warning
-                      : _EditAssignPalette.darkBlue,
+                  label: hasEditor ? editorName : 'Belum Ada Editor',
+                  color: hasEditor ? _AssignPalette.darkBlue : AppColors.grey,
                 ),
               ),
             ],
@@ -973,48 +1263,15 @@ class _EditRequestCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          Container(
-            padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
-            decoration: BoxDecoration(
-              gradient: _EditAssignPalette.softGradient,
-              borderRadius: BorderRadius.circular(17),
-              border: Border.all(color: Colors.white.withOpacity(0.76)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _CompactInfo(
-                        icon: Icons.photo_library_rounded,
-                        label: 'Jumlah File',
-                        value: '$fileCount file',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _CompactInfo(
-                        icon: Icons.timer_rounded,
-                        label: 'Deadline',
-                        value: deadlineText,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _WideCompactInfo(
-                  icon: Icons.folder_copy_rounded,
-                  label: 'File Dipilih',
-                  value: fileText,
-                ),
-              ],
-            ),
+          _RequestInfoPanel(
+            selectedFiles: selectedFiles,
+            deadlineText: deadlineText,
           ),
 
           if (requestNotes.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
             _MessageBox(
-              color: _EditAssignPalette.midBlue,
+              color: _AssignPalette.darkBlue,
               icon: Icons.notes_rounded,
               text: requestNotes,
             ),
@@ -1024,7 +1281,7 @@ class _EditRequestCard extends StatelessWidget {
 
           SizedBox(
             width: double.infinity,
-            height: 43,
+            height: 44,
             child: ElevatedButton.icon(
               onPressed: canAssign ? onAssign : null,
               icon: isSubmitting
@@ -1033,7 +1290,7 @@ class _EditRequestCard extends StatelessWidget {
                       height: 17,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     )
                   : const Icon(Icons.assignment_ind_rounded, size: 18),
@@ -1044,11 +1301,11 @@ class _EditRequestCard extends StatelessWidget {
               ),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
-                backgroundColor: _EditAssignPalette.darkBlue,
-                foregroundColor: Colors.white,
+                backgroundColor: _AssignPalette.darkBlue,
+                foregroundColor: AppColors.white,
                 shadowColor: Colors.transparent,
                 disabledBackgroundColor: AppColors.grey.withOpacity(0.35),
-                disabledForegroundColor: Colors.white.withOpacity(0.86),
+                disabledForegroundColor: AppColors.white.withOpacity(0.86),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -1056,6 +1313,183 @@ class _EditRequestCard extends StatelessWidget {
                   fontSize: 12.5,
                   fontWeight: FontWeight.w900,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestInfoPanel extends StatelessWidget {
+  final List<String> selectedFiles;
+  final String deadlineText;
+
+  const _RequestInfoPanel({
+    required this.selectedFiles,
+    required this.deadlineText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final previewFiles = selectedFiles.take(6).toList();
+    final remaining = selectedFiles.length - previewFiles.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+      decoration: BoxDecoration(
+        gradient: _AssignPalette.softGradient,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: AppColors.white.withOpacity(0.76)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _CompactInfo(
+                  icon: Icons.photo_library_rounded,
+                  label: 'Jumlah File',
+                  value: '${selectedFiles.length} file',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CompactInfo(
+                  icon: Icons.timer_rounded,
+                  label: 'Deadline',
+                  value: deadlineText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _FilePreviewWrap(files: previewFiles, remaining: remaining),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilePreviewWrap extends StatelessWidget {
+  final List<String> files;
+  final int remaining;
+
+  const _FilePreviewWrap({required this.files, required this.remaining});
+
+  @override
+  Widget build(BuildContext context) {
+    if (files.isEmpty) {
+      return const _SmallInfoBox(
+        icon: Icons.folder_off_rounded,
+        text: 'Belum ada file dipilih',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SmallInfoTitle(
+          icon: Icons.folder_copy_rounded,
+          text: 'File Dipilih',
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            ...files.map((file) => _FileChip(label: file)),
+            if (remaining > 0) _FileChip(label: '+$remaining file'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FileChip extends StatelessWidget {
+  final String label;
+
+  const _FileChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 132),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.white),
+      ),
+      child: Text(
+        label.trim().isEmpty ? '-' : label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: _AssignPalette.darkBlue,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _SmallInfoTitle extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _SmallInfoTitle({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: _AssignPalette.darkBlue, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(
+            color: _AssignPalette.darkBlue.withOpacity(0.58),
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SmallInfoBox extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _SmallInfoBox({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.68),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.white),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.grey, size: 17),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppColors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1084,7 +1518,7 @@ class _EditorOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.success : _EditAssignPalette.darkBlue;
+    final color = isSelected ? AppColors.success : _AssignPalette.darkBlue;
 
     return Material(
       color: Colors.transparent,
@@ -1094,16 +1528,14 @@ class _EditorOptionCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: isSelected
-                  ? AppColors.success
-                  : _EditAssignPalette.cardDeep,
+              color: isSelected ? AppColors.success : _AssignPalette.cardDeep,
             ),
             boxShadow: [
               BoxShadow(
-                color: _EditAssignPalette.darkBlue.withOpacity(0.05),
+                color: _AssignPalette.darkBlue.withOpacity(0.05),
                 blurRadius: 12,
                 offset: const Offset(0, 7),
               ),
@@ -1139,8 +1571,8 @@ class _EditorOptionCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: _EditAssignPalette.darkBlue,
-                            fontSize: 16,
+                            color: _AssignPalette.darkBlue,
+                            fontSize: 15,
                             height: 1.1,
                             fontWeight: FontWeight.w900,
                           ),
@@ -1151,10 +1583,8 @@ class _EditorOptionCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: _EditAssignPalette.darkBlue.withOpacity(
-                              0.56,
-                            ),
-                            fontSize: 11.8,
+                            color: _AssignPalette.darkBlue.withOpacity(0.58),
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1174,9 +1604,9 @@ class _EditorOptionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
                 decoration: BoxDecoration(
-                  gradient: _EditAssignPalette.softGradient,
+                  gradient: _AssignPalette.softGradient,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: Colors.white.withOpacity(0.76)),
+                  border: Border.all(color: AppColors.white.withOpacity(0.76)),
                 ),
                 child: Row(
                   children: [
@@ -1273,7 +1703,7 @@ class _CompactInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: _EditAssignPalette.darkBlue, size: 16),
+        Icon(icon, color: _AssignPalette.darkBlue, size: 16),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
@@ -1284,7 +1714,7 @@ class _CompactInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: _EditAssignPalette.darkBlue.withOpacity(0.54),
+                  color: _AssignPalette.darkBlue.withOpacity(0.54),
                   fontSize: 9.8,
                   height: 1,
                   fontWeight: FontWeight.w800,
@@ -1296,61 +1726,9 @@ class _CompactInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: _EditAssignPalette.darkBlue,
+                  color: _AssignPalette.darkBlue,
                   fontSize: 11.2,
                   height: 1,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _WideCompactInfo extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _WideCompactInfo({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: _EditAssignPalette.darkBlue, size: 16),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: _EditAssignPalette.darkBlue.withOpacity(0.54),
-                  fontSize: 9.8,
-                  height: 1,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value.trim().isEmpty ? '-' : value,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _EditAssignPalette.darkBlue,
-                  fontSize: 11.2,
-                  height: 1.25,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1421,9 +1799,9 @@ class _EmptyEditRequestState extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
         decoration: BoxDecoration(
-          gradient: _EditAssignPalette.softGradient,
+          gradient: _AssignPalette.softGradient,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.78)),
+          border: Border.all(color: AppColors.white.withOpacity(0.78)),
         ),
         child: Column(
           children: [
@@ -1431,20 +1809,20 @@ class _EmptyEditRequestState extends StatelessWidget {
               width: 62,
               height: 62,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.60),
+                color: AppColors.white.withOpacity(0.60),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.edit_note_outlined,
                 size: 34,
-                color: _EditAssignPalette.darkBlue,
+                color: _AssignPalette.darkBlue,
               ),
             ),
             const SizedBox(height: 14),
             const Text(
-              'Belum ada permintaan edit',
+              'Belum ada request edit',
               style: TextStyle(
-                color: _EditAssignPalette.darkBlue,
+                color: _AssignPalette.darkBlue,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
               ),
@@ -1454,7 +1832,7 @@ class _EmptyEditRequestState extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: _EditAssignPalette.darkBlue.withOpacity(0.62),
+                color: _AssignPalette.darkBlue.withOpacity(0.62),
                 height: 1.45,
                 fontWeight: FontWeight.w600,
               ),
@@ -1465,8 +1843,8 @@ class _EmptyEditRequestState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Muat Ulang'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _EditAssignPalette.darkBlue,
-                side: const BorderSide(color: _EditAssignPalette.cardDeep),
+                foregroundColor: _AssignPalette.darkBlue,
+                side: const BorderSide(color: _AssignPalette.cardDeep),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -1500,20 +1878,12 @@ class _ErrorState extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Container(
-              width: 62,
-              height: 62,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.74),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.error_outline_rounded,
-                size: 34,
-                color: AppColors.danger,
-              ),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: AppColors.danger,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             const Text(
               'Data gagal dimuat',
               style: TextStyle(
@@ -1549,6 +1919,24 @@ class _ErrorState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 170,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _AssignPalette.cardDeep),
+      ),
+      child: const CircularProgressIndicator(color: _AssignPalette.darkBlue),
     );
   }
 }

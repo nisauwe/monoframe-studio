@@ -51,11 +51,25 @@ class _FrontOfficeFinanceScreenState extends State<FrontOfficeFinanceScreen> {
   String _formatDate(DateTime date) {
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
+
     return '${date.year}-$month-$day';
   }
 
   String _formatHumanDate(DateTime date) {
     return DateFormat('d MMM yyyy', 'id_ID').format(date);
+  }
+
+  String _formatHistoryDate(String value) {
+    final text = value.trim();
+
+    if (text.isEmpty) return '-';
+
+    final normalized = text.contains('T') ? text : text.replaceFirst(' ', 'T');
+    final parsed = DateTime.tryParse(normalized);
+
+    if (parsed == null) return text;
+
+    return DateFormat('d MMM yyyy', 'id_ID').format(parsed);
   }
 
   Future<void> _pickRange() async {
@@ -68,7 +82,7 @@ class _FrontOfficeFinanceScreenState extends State<FrontOfficeFinanceScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.primaryDark,
+              primary: AppColors.welcomeBlueDark,
               surface: AppColors.light,
             ),
           ),
@@ -112,152 +126,528 @@ class _FrontOfficeFinanceScreenState extends State<FrontOfficeFinanceScreen> {
     final provider = context.watch<FrontOfficeProvider>();
     final summary = provider.financeSummary;
 
+    final income = summary?.income ?? 0;
+    final expenses = summary?.expenses ?? 0;
+    final balance = summary?.balance ?? 0;
+
     return Scaffold(
-      backgroundColor: AppColors.secondary,
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: RefreshIndicator(
-          color: AppColors.primaryDark,
-          onRefresh: _fetchFinance,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
-            children: [
-              _FinanceHero(
-                start: _formatHumanDate(_startDate),
-                end: _formatHumanDate(_endDate),
-                onPickRange: _pickRange,
-              ),
-              const SizedBox(height: 18),
-
-              if (provider.isLoading && summary == null)
-                const Padding(
-                  padding: EdgeInsets.only(top: 80),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else ...[
-                _MainBalanceCard(
-                  balance: _formatCurrency(summary?.balance ?? 0),
-                  income: _formatCurrency(summary?.income ?? 0),
-                  expense: _formatCurrency(summary?.expenses ?? 0),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.background,
+                AppColors.secondary,
+                AppColors.secondary,
+              ],
+            ),
+          ),
+          child: RefreshIndicator(
+            color: AppColors.welcomeBlueDark,
+            backgroundColor: AppColors.welcomeCardLight,
+            onRefresh: _fetchFinance,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 132),
+              children: [
+                _FinanceHeroCard(
+                  start: _formatHumanDate(_startDate),
+                  end: _formatHumanDate(_endDate),
+                  balance: _formatCurrency(balance),
+                  income: _formatCurrency(income),
+                  expense: _formatCurrency(expenses),
+                  onPickRange: _pickRange,
                 ),
-                const SizedBox(height: 14),
 
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.25,
+                const SizedBox(height: 16),
+
+                Row(
                   children: [
-                    _MiniFinanceCard(
-                      title: 'Booking',
-                      value: _formatCurrency(
-                        summary?.bookingPaymentIncome ?? 0,
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.remove_circle_outline_rounded,
+                        title: 'Input Pengeluaran',
+                        subtitle: 'Catat biaya operasional',
+                        color: AppColors.danger,
+                        onTap: _openExpenseForm,
                       ),
-                      icon: Icons.camera_alt_outlined,
-                      color: AppColors.primaryDark,
                     ),
-                    _MiniFinanceCard(
-                      title: 'Cetak',
-                      value: _formatCurrency(summary?.printPaymentIncome ?? 0),
-                      icon: Icons.print_outlined,
-                      color: AppColors.accent,
-                    ),
-                    _MiniFinanceCard(
-                      title: 'Manual',
-                      value: _formatCurrency(summary?.manualIncome ?? 0),
-                      icon: Icons.add_card_outlined,
-                      color: AppColors.success,
-                    ),
-                    _MiniFinanceCard(
-                      title: 'Keluar',
-                      value: _formatCurrency(summary?.expenses ?? 0),
-                      icon: Icons.receipt_long_outlined,
-                      color: AppColors.danger,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.add_circle_outline_rounded,
+                        title: 'Pemasukan Manual',
+                        subtitle: 'Tambah pemasukan lain',
+                        color: AppColors.welcomeBlueDark,
+                        onTap: _openIncomeForm,
+                      ),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 18),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _openExpenseForm,
-                        icon: const Icon(Icons.remove_circle_outline),
-                        label: const Text('Input Pengeluaran'),
+                if (provider.isLoading && summary == null)
+                  const _LoadingState()
+                else ...[
+                  _BreakdownGrid(
+                    bookingIncome: _formatCurrency(
+                      summary?.bookingPaymentIncome ?? 0,
+                    ),
+                    printIncome: _formatCurrency(
+                      summary?.printPaymentIncome ?? 0,
+                    ),
+                    manualIncome: _formatCurrency(summary?.manualIncome ?? 0),
+                    expense: _formatCurrency(summary?.expenses ?? 0),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const _SectionTitle(
+                    title: 'Pembayaran Sistem',
+                    subtitle:
+                        'Pemasukan dari payment gateway booking dan cetak.',
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  if (summary == null || summary.recentPayments.isEmpty)
+                    const _EmptyStateCard(
+                      icon: Icons.payments_outlined,
+                      title: 'Belum ada pembayaran sistem',
+                      message:
+                          'Pembayaran booking dan cetak dari payment gateway akan tampil di sini.',
+                    )
+                  else
+                    ...summary.recentPayments.map(
+                      (payment) => _PaymentTile(
+                        payment: payment,
+                        amountText: _formatCurrency(payment.baseAmount),
+                        dateText: _formatHistoryDate(payment.paidAt),
                       ),
                     ),
-                    const SizedBox(width: 10),
+
+                  const SizedBox(height: 22),
+
+                  const _SectionTitle(
+                    title: 'Pemasukan Manual',
+                    subtitle: 'Catatan pemasukan tambahan dari Front Office.',
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  if (summary == null || summary.recentIncomes.isEmpty)
+                    const _EmptyStateCard(
+                      icon: Icons.add_card_outlined,
+                      title: 'Belum ada pemasukan manual',
+                      message:
+                          'Pemasukan tambahan yang dibuat Front Office akan muncul di sini.',
+                    )
+                  else
+                    ...summary.recentIncomes.map(
+                      (income) => _IncomeTile(
+                        income: income,
+                        amountText: _formatCurrency(income.amount),
+                        dateText: _formatHistoryDate(income.incomeDate),
+                      ),
+                    ),
+
+                  const SizedBox(height: 22),
+
+                  const _SectionTitle(
+                    title: 'Pengeluaran Operasional',
+                    subtitle:
+                        'Biaya studio, transport, cetak, dan kebutuhan lain.',
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  if (summary == null || summary.recentExpenses.isEmpty)
+                    const _EmptyStateCard(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Belum ada pengeluaran',
+                      message:
+                          'Pengeluaran operasional yang dicatat akan muncul di sini.',
+                    )
+                  else
+                    ...summary.recentExpenses.map(
+                      (expense) => _ExpenseTile(
+                        expense: expense,
+                        amountText: _formatCurrency(expense.amount),
+                        dateText: _formatHistoryDate(expense.expenseDate),
+                      ),
+                    ),
+
+                  if (provider.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    _ErrorMessageBox(message: provider.errorMessage!),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FinanceHeroCard extends StatelessWidget {
+  final String start;
+  final String end;
+  final String balance;
+  final String income;
+  final String expense;
+  final VoidCallback onPickRange;
+
+  const _FinanceHeroCard({
+    required this.start,
+    required this.end,
+    required this.balance,
+    required this.income,
+    required this.expense,
+    required this.onPickRange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: AppColors.welcomeDarkGradient,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.welcomeBlueDark.withOpacity(0.20),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -40,
+            top: -46,
+            child: Container(
+              width: 132,
+              height: 132,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.11),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 38,
+            bottom: -56,
+            child: Container(
+              width: 114,
+              height: 114,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.20),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.white,
+                        size: 31,
+                      ),
+                    ),
+                    const SizedBox(width: 13),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _openIncomeForm,
-                        icon: const Icon(Icons.add_circle_outline),
-                        label: const Text('Konfirmasi Pemasukan'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Keuangan Studio',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              height: 1.08,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 7),
+                          Text(
+                            'Pantau pemasukan, pengeluaran, dan saldo periode.',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.74),
+                              fontSize: 12.8,
+                              height: 1.35,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
-                _SectionTitle(
-                  title: 'Pembayaran Sistem',
-                  subtitle: 'Pemasukan dari payment gateway booking/cetak',
-                ),
-                const SizedBox(height: 10),
-                if (summary == null || summary.recentPayments.isEmpty)
-                  const _EmptyState(message: 'Belum ada pembayaran sistem.')
-                else
-                  ...summary.recentPayments.map(
-                    (payment) => _PaymentTile(
-                      payment: payment,
-                      amountText: _formatCurrency(payment.baseAmount),
+                Material(
+                  color: Colors.white.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(18),
+                  child: InkWell(
+                    onTap: onPickRange,
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.18),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.date_range_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$start - $end',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-
-                const SizedBox(height: 22),
-
-                _SectionTitle(
-                  title: 'Pemasukan Manual',
-                  subtitle: 'Catatan pemasukan tambahan yang dibuat FO/admin',
                 ),
-                const SizedBox(height: 10),
-                if (summary == null || summary.recentIncomes.isEmpty)
-                  const _EmptyState(message: 'Belum ada pemasukan manual.')
-                else
-                  ...summary.recentIncomes.map(
-                    (income) => _IncomeTile(
-                      income: income,
-                      amountText: _formatCurrency(income.amount),
-                    ),
+
+                const SizedBox(height: 18),
+
+                Text(
+                  'Saldo Bersih',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.70),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
-
-                const SizedBox(height: 22),
-
-                _SectionTitle(
-                  title: 'Pengeluaran Operasional',
-                  subtitle:
-                      'Biaya studio, transport, cetak, dan kebutuhan lain',
                 ),
-                const SizedBox(height: 10),
-                if (summary == null || summary.recentExpenses.isEmpty)
-                  const _EmptyState(message: 'Belum ada pengeluaran.')
-                else
-                  ...summary.recentExpenses.map(
-                    (expense) => _ExpenseTile(
-                      expense: expense,
-                      amountText: _formatCurrency(expense.amount),
-                    ),
-                  ),
 
-                if (provider.errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  _ErrorBox(message: provider.errorMessage!),
-                ],
+                const SizedBox(height: 5),
+
+                Text(
+                  balance,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 31,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HeroFinancePill(
+                        icon: Icons.trending_up_rounded,
+                        label: 'Pemasukan',
+                        value: income,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _HeroFinancePill(
+                        icon: Icons.trending_down_rounded,
+                        label: 'Pengeluaran',
+                        value: expense,
+                      ),
+                    ),
+                  ],
+                ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroFinancePill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _HeroFinancePill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 70),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 22),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.74),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.welcomeCardDeep),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.welcomeBlueDark.withOpacity(0.045),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 43,
+                height: 43,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withOpacity(0.14)),
+                ),
+                child: Icon(icon, color: color, size: 23),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 12.8,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color.withOpacity(0.60),
+                        fontSize: 10.8,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -266,232 +656,65 @@ class _FrontOfficeFinanceScreenState extends State<FrontOfficeFinanceScreen> {
   }
 }
 
-class _FinanceHero extends StatelessWidget {
-  final String start;
-  final String end;
-  final VoidCallback onPickRange;
-
-  const _FinanceHero({
-    required this.start,
-    required this.end,
-    required this.onPickRange,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      decoration: BoxDecoration(
-        gradient: AppColors.welcomeDarkGradient,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_rounded,
-                color: AppColors.white,
-              ),
-              SizedBox(width: 9),
-              Text(
-                'Manajemen Keuangan',
-                style: TextStyle(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 20,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Akses pemasukan payment gateway, pemasukan manual, pengeluaran, dan saldo periode.',
-            style: TextStyle(
-              color: AppColors.white.withOpacity(0.78),
-              height: 1.45,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Material(
-            color: AppColors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: onPickRange,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
-                  vertical: 11,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.date_range_rounded,
-                      color: AppColors.white,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Text(
-                        '$start - $end',
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.white,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MainBalanceCard extends StatelessWidget {
-  final String balance;
-  final String income;
+class _BreakdownGrid extends StatelessWidget {
+  final String bookingIncome;
+  final String printIncome;
+  final String manualIncome;
   final String expense;
 
-  const _MainBalanceCard({
-    required this.balance,
-    required this.income,
+  const _BreakdownGrid({
+    required this.bookingIncome,
+    required this.printIncome,
+    required this.manualIncome,
     required this.expense,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.light,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Saldo Bersih',
-            style: TextStyle(
-              color: AppColors.grey,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            balance,
-            style: const TextStyle(
-              color: AppColors.primaryDark,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _BalancePill(
-                  label: 'Masuk',
-                  value: income,
-                  color: AppColors.success,
-                  icon: Icons.trending_up_rounded,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _BalancePill(
-                  label: 'Keluar',
-                  value: expense,
-                  color: AppColors.danger,
-                  icon: Icons.trending_down_rounded,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 1.20,
+      children: [
+        _BreakdownCard(
+          title: 'Booking',
+          value: bookingIncome,
+          icon: Icons.camera_alt_rounded,
+          color: AppColors.welcomeBlueDark,
+        ),
+        _BreakdownCard(
+          title: 'Cetak Foto',
+          value: printIncome,
+          icon: Icons.local_printshop_rounded,
+          color: AppColors.welcomeBlueMid,
+        ),
+        _BreakdownCard(
+          title: 'Manual',
+          value: manualIncome,
+          icon: Icons.add_card_rounded,
+          color: AppColors.success,
+        ),
+        _BreakdownCard(
+          title: 'Keluar',
+          value: expense,
+          icon: Icons.receipt_long_rounded,
+          color: AppColors.danger,
+        ),
+      ],
     );
   }
 }
 
-class _BalancePill extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final IconData icon;
-
-  const _BalancePill({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 19),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w900),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniFinanceCard extends StatelessWidget {
+class _BreakdownCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
   final Color color;
 
-  const _MiniFinanceCard({
+  const _BreakdownCard({
     required this.title,
     required this.value,
     required this.icon,
@@ -501,31 +724,53 @@ class _MiniFinanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(13, 13, 13, 13),
       decoration: BoxDecoration(
-        color: AppColors.light,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.welcomeCardDeep),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.welcomeBlueDark.withOpacity(0.045),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color),
+          Container(
+            width: 41,
+            height: 41,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.14)),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
           const Spacer(),
           Text(
             title,
-            style: const TextStyle(
-              color: AppColors.grey,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color.withOpacity(0.66),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: color,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
@@ -544,11 +789,11 @@ class _SectionTitle extends StatelessWidget {
     return Row(
       children: [
         Container(
-          height: 32,
+          height: 42,
           width: 5,
           decoration: BoxDecoration(
-            color: AppColors.primaryDark,
-            borderRadius: BorderRadius.circular(99),
+            gradient: AppColors.welcomeDarkGradient,
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
         const SizedBox(width: 10),
@@ -558,18 +803,24 @@ class _SectionTitle extends StatelessWidget {
             children: [
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.dark,
-                  fontSize: 18,
+                  fontSize: 19,
                   fontWeight: FontWeight.w900,
                 ),
               ),
+              const SizedBox(height: 3),
               Text(
                 subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.grey,
+                  fontSize: 12.3,
+                  height: 1.25,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
                 ),
               ),
             ],
@@ -583,18 +834,25 @@ class _SectionTitle extends StatelessWidget {
 class _PaymentTile extends StatelessWidget {
   final FoPaymentModel payment;
   final String amountText;
+  final String dateText;
 
-  const _PaymentTile({required this.payment, required this.amountText});
+  const _PaymentTile({
+    required this.payment,
+    required this.amountText,
+    required this.dateText,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return _FinanceListTile(
-      icon: Icons.payments_outlined,
-      iconColor: AppColors.success,
+    return _FinanceHistoryCard(
+      icon: Icons.payments_rounded,
+      color: AppColors.success,
       title: payment.clientName,
-      subtitle: '${payment.packageName} • ${payment.paymentStageLabel}',
-      trailing: '+$amountText',
-      trailingColor: AppColors.success,
+      subtitle: payment.packageName,
+      dateText: dateText,
+      meta: payment.paymentStageLabel,
+      amountText: '+$amountText',
+      amountColor: AppColors.success,
     );
   }
 }
@@ -602,20 +860,27 @@ class _PaymentTile extends StatelessWidget {
 class _IncomeTile extends StatelessWidget {
   final FoIncomeModel income;
   final String amountText;
+  final String dateText;
 
-  const _IncomeTile({required this.income, required this.amountText});
+  const _IncomeTile({
+    required this.income,
+    required this.amountText,
+    required this.dateText,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return _FinanceListTile(
-      icon: Icons.add_card_outlined,
-      iconColor: AppColors.success,
+    return _FinanceHistoryCard(
+      icon: Icons.add_card_rounded,
+      color: AppColors.success,
       title: income.category,
       subtitle: income.description.isEmpty
-          ? income.incomeDate
-          : '${income.incomeDate} • ${income.description}',
-      trailing: '+$amountText',
-      trailingColor: AppColors.success,
+          ? 'Dibuat oleh ${income.createdBy}'
+          : income.description,
+      dateText: dateText,
+      meta: 'Pemasukan Manual',
+      amountText: '+$amountText',
+      amountColor: AppColors.success,
     );
   }
 }
@@ -623,61 +888,83 @@ class _IncomeTile extends StatelessWidget {
 class _ExpenseTile extends StatelessWidget {
   final FoExpenseModel expense;
   final String amountText;
+  final String dateText;
 
-  const _ExpenseTile({required this.expense, required this.amountText});
-
-  @override
-  Widget build(BuildContext context) {
-    return _FinanceListTile(
-      icon: Icons.receipt_long_outlined,
-      iconColor: AppColors.danger,
-      title: expense.category,
-      subtitle: expense.description.isEmpty
-          ? expense.expenseDate
-          : '${expense.expenseDate} • ${expense.description}',
-      trailing: '-$amountText',
-      trailingColor: AppColors.danger,
-    );
-  }
-}
-
-class _FinanceListTile extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final String trailing;
-  final Color trailingColor;
-
-  const _FinanceListTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-    required this.trailingColor,
+  const _ExpenseTile({
+    required this.expense,
+    required this.amountText,
+    required this.dateText,
   });
 
   @override
   Widget build(BuildContext context) {
+    return _FinanceHistoryCard(
+      icon: Icons.receipt_long_rounded,
+      color: AppColors.danger,
+      title: expense.category,
+      subtitle: expense.description.isEmpty
+          ? 'Dibuat oleh ${expense.createdBy}'
+          : expense.description,
+      dateText: dateText,
+      meta: 'Pengeluaran',
+      amountText: '-$amountText',
+      amountColor: AppColors.danger,
+    );
+  }
+}
+
+class _FinanceHistoryCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String dateText;
+  final String meta;
+  final String amountText;
+  final Color amountColor;
+
+  const _FinanceHistoryCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.dateText,
+    required this.meta,
+    required this.amountText,
+    required this.amountColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanTitle = title.trim().isEmpty ? '-' : title.trim();
+    final cleanSubtitle = subtitle.trim().isEmpty ? '-' : subtitle.trim();
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: AppColors.light,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.welcomeCardDeep),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.welcomeBlueDark.withOpacity(0.045),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            height: 42,
-            width: 42,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(15),
+              color: color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: color.withOpacity(0.14)),
             ),
-            child: Icon(icon, color: iconColor),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 11),
           Expanded(
@@ -685,32 +972,58 @@ class _FinanceListTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title.isEmpty ? '-' : title,
+                  cleanTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppColors.dark,
+                    color: AppColors.welcomeBlueDark,
+                    fontSize: 15,
+                    height: 1.1,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 5),
                 Text(
-                  subtitle.isEmpty ? '-' : subtitle,
+                  cleanSubtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.grey,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                  style: TextStyle(
+                    color: AppColors.welcomeBlueDark.withOpacity(0.55),
+                    fontSize: 11.8,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 7,
+                  children: [
+                    _SmallInfoChip(
+                      icon: Icons.calendar_month_rounded,
+                      label: dateText,
+                      color: AppColors.welcomeBlueDark,
+                    ),
+                    _SmallInfoChip(
+                      icon: Icons.bookmark_rounded,
+                      label: meta,
+                      color: color,
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
           Text(
-            trailing,
-            style: TextStyle(color: trailingColor, fontWeight: FontWeight.w900),
+            amountText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: amountColor,
+              fontSize: 12.7,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
@@ -718,50 +1031,155 @@ class _FinanceListTile extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  final String message;
+class _SmallInfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
 
-  const _EmptyState({required this.message});
+  const _SmallInfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final clean = label.trim().isEmpty ? '-' : label.trim();
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      height: 27,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.light,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.12)),
       ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: AppColors.grey,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            clean,
+            style: TextStyle(
+              color: color,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ErrorBox extends StatelessWidget {
+class _EmptyStateCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
   final String message;
 
-  const _ErrorBox({required this.message});
+  const _EmptyStateCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
       decoration: BoxDecoration(
-        color: AppColors.danger.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(18),
+        gradient: AppColors.welcomeCardGradient,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: Colors.white.withOpacity(0.78)),
       ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: AppColors.danger,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.66),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.welcomeBlueDark, size: 35),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.welcomeBlueDark,
+              fontSize: 16.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.welcomeBlueDark.withOpacity(0.62),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 110),
+      child: Center(
+        child: CircularProgressIndicator(color: AppColors.welcomeBlueDark),
+      ),
+    );
+  }
+}
+
+class _ErrorMessageBox extends StatelessWidget {
+  final String message;
+
+  const _ErrorMessageBox({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.danger.withOpacity(0.14)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.danger,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontSize: 11.8,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

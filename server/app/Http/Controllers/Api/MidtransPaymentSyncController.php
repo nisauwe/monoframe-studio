@@ -8,6 +8,7 @@ use App\Models\PaymentGateway;
 use App\Models\PaymentGatewayLog;
 use App\Models\PrintOrder;
 use App\Models\ScheduleBooking;
+use App\Services\BookingPaymentStatusSyncService;
 use App\Services\BookingTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -45,12 +46,21 @@ class MidtransPaymentSyncController extends Controller
 
         $payment->refresh();
 
-        $this->processBookingPayment($payment);
+        app(BookingPaymentStatusSyncService::class)->sync($payment);
 
-        $booking->refresh();
+        $booking = $booking->fresh([
+            'package',
+            'clientUser',
+            'photographerUser',
+            'latestPayment',
+            'successfulBookingPayments',
+            'trackings',
+        ]);
+
+        $payment->refresh();
 
         return response()->json([
-            'message' => 'Status pembayaran booking berhasil diperbarui.',
+            'message' => $this->bookingSyncMessage($payment, $booking),
             'data' => [
                 'payment' => $payment,
                 'booking' => $booking,
@@ -98,7 +108,9 @@ class MidtransPaymentSyncController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Status pembayaran cetak berhasil diperbarui.',
+            'message' => $payment->isPaid()
+                ? 'Pembayaran cetak berhasil diperbarui.'
+                : 'Status pembayaran cetak masih ' . $payment->transaction_status . '.',
             'data' => [
                 'payment' => $payment,
                 'print_order' => $printOrder,
@@ -198,7 +210,6 @@ class MidtransPaymentSyncController extends Controller
         }
 
         $normalizedStatus = $this->normalizeStatus($transactionStatus, $fraudStatus);
-
         $grossAmount = $payload['gross_amount'] ?? null;
 
         $payment->update([
@@ -209,7 +220,9 @@ class MidtransPaymentSyncController extends Controller
             'transaction_status' => $normalizedStatus,
             'fraud_status' => $fraudStatus,
             'status_message' => $payload['status_message'] ?? $payment->status_message,
-            'gross_amount' => $grossAmount ? (int) round((float) $grossAmount) : $payment->gross_amount,
+            'gross_amount' => $grossAmount
+                ? (int) round((float) $grossAmount)
+                : $payment->gross_amount,
             'va_numbers' => $payload['va_numbers'] ?? $payment->va_numbers,
             'payment_code' => $payload['payment_code']
                 ?? $payload['bill_key']
@@ -239,6 +252,7 @@ class MidtransPaymentSyncController extends Controller
                 'payment_id' => $payment->id,
                 'order_id' => $payment->order_id,
                 'payment_context' => $payment->payment_context,
+                'payment_stage' => $payment->payment_stage,
                 'print_order_id' => $payment->print_order_id,
                 'midtrans_response' => $payload,
             ],
@@ -250,37 +264,6 @@ class MidtransPaymentSyncController extends Controller
         ];
     }
 
-    private function processBookingPayment(Payment $payment): void
-    {
-        $booking = $payment->scheduleBooking;
-
-        if (!$booking) {
-            return;
-        }
-
-        $booking->refresh();
-
-        if ($booking->isFullyPaid()) {
-            $booking->update([
-                'payment_status' => 'fully_paid',
-                'status' => 'confirmed',
-            ]);
-        } elseif ($booking->isDpPaid()) {
-            $booking->update([
-                'payment_status' => 'partially_paid',
-                'status' => 'confirmed',
-            ]);
-        } elseif ($payment->isFailed()) {
-            $booking->update([
-                'payment_status' => 'failed',
-            ]);
-        } else {
-            $booking->update([
-                'payment_status' => 'pending',
-            ]);
-        }
-    }
-
     private function processPrintPayment(Payment $payment, BookingTrackingService $trackingService): void
     {
         $printOrder = $payment->printOrder;
@@ -289,7 +272,7 @@ class MidtransPaymentSyncController extends Controller
             return;
         }
 
-        if ($payment->isSuccess()) {
+        if ($payment->isPaid()) {
             $printOrder->update([
                 'payment_status' => 'paid',
                 'status' => 'paid',
@@ -343,5 +326,26 @@ class MidtransPaymentSyncController extends Controller
         return $isProduction
             ? 'https://api.midtrans.com'
             : 'https://api.sandbox.midtrans.com';
+    }
+
+    private function bookingSyncMessage(Payment $payment, ScheduleBooking $booking): string
+    {
+        if ($booking->isFullyPaid()) {
+            return 'Pelunasan berhasil diperbarui. Booking sudah lunas.';
+        }
+
+        if ($booking->isDpPaid()) {
+            if ($payment->isPending()) {
+                return 'Status pembayaran masih pending di Midtrans. DP sudah tercatat, pelunasan belum lunas.';
+            }
+
+            return 'Status pembayaran berhasil diperbarui. DP sudah tercatat, pelunasan belum lunas.';
+        }
+
+        if ($payment->isFailed()) {
+            return 'Pembayaran gagal atau kedaluwarsa.';
+        }
+
+        return 'Status pembayaran masih pending di Midtrans.';
     }
 }
