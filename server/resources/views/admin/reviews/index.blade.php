@@ -40,7 +40,6 @@
   <div class="container-xxl flex-grow-1 container-p-y">
     <div class="dashboard-shell review-page">
 
-      {{-- ALERT --}}
       @if (session('success'))
         <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
           <i class="bx bx-check-circle me-1"></i>
@@ -57,7 +56,6 @@
         </div>
       @endif
 
-      {{-- HERO HEADER --}}
       <div class="review-hero-card mb-4">
         <div class="review-hero-left">
           <div class="review-hero-icon">
@@ -83,7 +81,6 @@
         </div>
       </div>
 
-      {{-- STAT CARDS --}}
       <div class="row g-4 mb-4">
         <div class="col-xl-3 col-md-6">
           <div class="card stat-card h-100 review-stat-card">
@@ -158,7 +155,6 @@
         </div>
       </div>
 
-      {{-- INFO CARD --}}
       <div class="review-info-card mb-4">
         <div class="review-info-icon">
           <i class="bx bx-info-circle"></i>
@@ -167,20 +163,21 @@
         <div>
           <h6>Monitoring Review Klien</h6>
           <p>
-            Admin dapat memantau review yang diberikan klien setelah booking selesai. Review hanya bisa dilihat
-            dan dihapus jika dianggap tidak sesuai. Admin tidak dapat mengubah isi review dari klien.
+            Admin dapat memantau review yang diberikan klien setelah booking selesai.
+            Review hanya bisa dilihat dan dihapus jika dianggap tidak sesuai.
+            Admin tidak dapat mengubah isi review dari klien.
           </p>
         </div>
       </div>
 
-      {{-- REVIEW LIST --}}
       <div class="card section-card review-list-card">
         <div class="card-header">
           <div class="review-card-head">
             <div>
               <h5 class="section-title">Daftar Review Klien</h5>
               <p class="section-subtitle mb-0">
-                Review ditampilkan dalam bentuk kartu 3 kolom agar data klien, paket, rating, dan komentar lebih nyaman dibaca.
+                Review ditampilkan dalam bentuk kartu agar data klien, paket, rating,
+                dan komentar lebih nyaman dibaca.
               </p>
             </div>
 
@@ -191,11 +188,9 @@
           </div>
         </div>
 
-        {{-- FILTER --}}
         <div class="card-body review-filter-body">
           <form method="GET" action="{{ route('admin.reviews.index') }}" class="review-filter-form">
             <div class="review-filter-grid">
-
               <div class="review-filter-group review-filter-search-group">
                 <label class="form-label">Cari Review</label>
 
@@ -204,18 +199,20 @@
                     <i class="bx bx-search"></i>
                   </span>
 
-                  <input type="text"
+                  <input
+                    type="text"
                     name="search"
                     class="form-control review-search-control"
                     placeholder="Cari nama klien, email, paket, atau isi review..."
-                    value="{{ request('search') }}">
+                    value="{{ request('search') }}"
+                  >
                 </div>
               </div>
 
               <div class="review-filter-group">
                 <label class="form-label">Rating</label>
                 <select name="rating" class="form-select review-filter-control">
-                  <option value="" {{ !request('rating') || request('rating') === 'Semua Rating' ? 'selected' : '' }}>
+                  <option value="" {{ !request('rating') ? 'selected' : '' }}>
                     Semua Rating
                   </option>
 
@@ -229,18 +226,22 @@
 
               <div class="review-filter-group">
                 <label class="form-label">Dari Tanggal</label>
-                <input type="date"
+                <input
+                  type="date"
                   name="date_from"
                   class="form-control review-filter-control"
-                  value="{{ request('date_from') }}">
+                  value="{{ request('date_from') }}"
+                >
               </div>
 
               <div class="review-filter-group">
                 <label class="form-label">Sampai Tanggal</label>
-                <input type="date"
+                <input
+                  type="date"
                   name="date_to"
                   class="form-control review-filter-control"
-                  value="{{ request('date_to') }}">
+                  value="{{ request('date_to') }}"
+                >
               </div>
 
               <div class="review-filter-actions">
@@ -257,7 +258,6 @@
           </form>
         </div>
 
-        {{-- REVIEW CARD GRID --}}
         <div class="review-card-body">
           <div class="review-card-grid">
             @forelse ($reviews as $review)
@@ -265,6 +265,27 @@
                 $booking = $review->booking;
                 $client = $review->client;
                 $package = $booking?->package;
+
+                $printOrder = $booking?->printOrder;
+
+                $packageBasePrice = (int) (
+                    $booking?->package_base_price
+                    ?? $package?->discounted_price
+                    ?? $package?->price
+                    ?? 0
+                );
+
+                $extraDurationFee = (int) ($booking?->extra_duration_fee ?? 0);
+                $videoAddonPrice = (int) ($booking?->video_addon_price ?? 0);
+
+                $bookingTotal = (int) (
+                    $booking?->total_booking_amount
+                    ?? ($packageBasePrice + $extraDurationFee + $videoAddonPrice)
+                );
+
+                $printTotal = (int) ($printOrder?->total_amount ?? 0);
+
+                $grandTotal = $bookingTotal + $printTotal;
 
                 $clientName = $client?->name ?? $booking?->client_name ?? 'Klien';
                 $clientEmail = $client?->email ?? '-';
@@ -314,9 +335,11 @@
                     </div>
                   </div>
 
-                  <form action="{{ route('admin.reviews.destroy', $review) }}"
+                  <form
+                    action="{{ route('admin.reviews.destroy', $review) }}"
                     method="POST"
-                    onsubmit="return confirm('Yakin ingin menghapus review ini? Review yang dihapus tidak dapat dikembalikan.');">
+                    onsubmit="return confirm('Yakin ingin menghapus review ini? Review yang dihapus tidak dapat dikembalikan.');"
+                  >
                     @csrf
                     @method('DELETE')
 
@@ -422,11 +445,21 @@
                     <span>{{ $booking?->location_name ?? '-' }}</span>
                   </div>
 
-                  @if ($package?->price)
-                    <strong>
-                      Rp {{ number_format((float) ($package->discounted_price ?? $package->price), 0, ',', '.') }}
-                    </strong>
-                  @endif
+                  <strong>
+                    Rp {{ number_format($grandTotal, 0, ',', '.') }}
+                  </strong>
+                </div>
+
+                <div class="review-price-breakdown">
+                  <div>
+                    <span>Booking</span>
+                    <strong>Rp {{ number_format($bookingTotal, 0, ',', '.') }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Cetak</span>
+                    <strong>Rp {{ number_format($printTotal, 0, ',', '.') }}</strong>
+                  </div>
                 </div>
               </div>
             @empty
@@ -449,6 +482,15 @@
   </div>
 
   <style>
+    :root {
+      --mf-primary: #2f48a6;
+      --mf-blue: #5d7ce4;
+      --mf-ink: #23314f;
+      --mf-muted: #6b7c93;
+      --mf-border: #dce8f1;
+      --mf-shadow-soft: 0 18px 42px rgba(52, 79, 165, 0.10);
+    }
+
     .review-page {
       max-width: 1480px;
       margin: 0 auto;
@@ -574,6 +616,26 @@
       box-shadow: 0 24px 48px rgba(52, 79, 165, 0.14);
     }
 
+    .stat-label {
+      color: var(--mf-muted);
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .stat-number {
+      color: var(--mf-ink);
+      font-size: 30px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .stat-helper {
+      color: var(--mf-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     .review-stat-icon {
       width: 58px;
       height: 58px;
@@ -644,6 +706,17 @@
       align-items: flex-start;
       flex-wrap: wrap;
       gap: 16px;
+    }
+
+    .section-title {
+      color: var(--mf-ink);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .section-subtitle {
+      color: var(--mf-muted);
+      font-weight: 600;
     }
 
     .review-total-badge {
@@ -744,11 +817,6 @@
       font-size: 20px;
     }
 
-    .review-search-addon i {
-      font-size: 20px;
-      line-height: 1;
-    }
-
     .review-search-control {
       height: 100% !important;
       flex: 1;
@@ -797,12 +865,16 @@
 
     .review-filter-actions .btn-primary {
       min-width: 104px;
+      background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+      border: 0;
       box-shadow: 0 12px 24px rgba(88, 115, 220, 0.20);
     }
 
     .review-filter-actions .btn-outline-secondary {
       min-width: 86px;
       background: #ffffff;
+      border-color: var(--mf-border);
+      color: var(--mf-ink);
     }
 
     .review-card-body {
@@ -1239,5 +1311,38 @@
         flex-direction: column;
       }
     }
+
+    .review-price-breakdown {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .review-price-breakdown div {
+        padding: 11px 12px;
+        border-radius: 18px;
+        border: 1px solid var(--mf-border);
+        background:
+          radial-gradient(circle at top right, rgba(88, 115, 220, 0.08), transparent 34%),
+          linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+      }
+
+      .review-price-breakdown span {
+        display: block;
+        color: var(--mf-muted);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
+      }
+
+      .review-price-breakdown strong {
+        display: block;
+        color: var(--mf-ink);
+        font-size: 12px;
+        font-weight: 900;
+      }
   </style>
 @endsection

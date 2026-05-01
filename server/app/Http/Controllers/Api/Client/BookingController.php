@@ -5,14 +5,14 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\BookingAddonSetting;
+use App\Models\BookingCancelLog;
 use App\Models\Package;
 use App\Models\ScheduleBooking;
-use App\Models\BookingCancelLog;
 use App\Services\BookingTrackingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -36,12 +36,10 @@ class BookingController extends Controller
 
         return response()->json([
             'message' => 'Daftar booking berhasil diambil',
-            'data' => $bookings->map(function ($booking) use ($trackingService) {
+            'data' => $bookings->map(function (ScheduleBooking $booking) use ($trackingService) {
                 $trackingService->syncTrackingState($booking);
 
-                $booking->refresh();
-
-                $booking->load([
+                $booking = $booking->fresh([
                     'package',
                     'latestPayment',
                     'payments',
@@ -63,7 +61,11 @@ class BookingController extends Controller
                 $currentStage = $timeline->firstWhere('status', 'current');
 
                 if (!$currentStage) {
-                    $currentStage = $timeline->lastWhere('status', 'done');
+                    $currentStage = $timeline
+                        ->filter(function ($item) {
+                            return in_array($item->status, ['done', 'skipped'], true);
+                        })
+                        ->last();
                 }
 
                 return [
@@ -80,14 +82,14 @@ class BookingController extends Controller
                     'end_time' => $booking->end_time,
                     'blocked_until' => $booking->blocked_until,
 
-                    'duration_minutes' => $booking->duration_minutes,
-                    'extra_duration_units' => $booking->extra_duration_units ?? 0,
-                    'extra_duration_minutes' => $booking->extra_duration_minutes ?? 0,
-                    'extra_duration_fee' => $booking->extra_duration_fee ?? 0,
+                    'duration_minutes' => (int) $booking->duration_minutes,
+                    'extra_duration_units' => (int) ($booking->extra_duration_units ?? 0),
+                    'extra_duration_minutes' => (int) ($booking->extra_duration_minutes ?? 0),
+                    'extra_duration_fee' => (int) ($booking->extra_duration_fee ?? 0),
 
                     'video_addon_type' => $booking->video_addon_type,
                     'video_addon_name' => $booking->video_addon_name,
-                    'video_addon_price' => $booking->video_addon_price ?? 0,
+                    'video_addon_price' => (int) ($booking->video_addon_price ?? 0),
 
                     'location_type' => $booking->location_type,
                     'location_name' => $booking->location_name,
@@ -106,47 +108,105 @@ class BookingController extends Controller
                     'latest_payment' => $latestPayment,
                     'moodboards' => $booking->moodboards,
 
-                    'total_booking_amount' => $booking->total_booking_amount,
-                    'paid_booking_amount' => $booking->paid_booking_amount,
-                    'minimum_dp_amount' => $booking->minimum_dp_amount,
-                    'remaining_booking_amount' => $booking->remaining_booking_amount,
+                    'total_booking_amount' => (int) $booking->total_booking_amount,
+                    'paid_booking_amount' => (int) $booking->paid_booking_amount,
+                    'minimum_dp_amount' => (int) $booking->minimum_dp_amount,
+                    'remaining_booking_amount' => (int) $booking->remaining_booking_amount,
+
                     'is_dp_paid' => $booking->isDpPaid(),
                     'is_fully_paid' => $booking->isFullyPaid(),
 
-                    'has_photo_link' => (bool) $booking->photoLink,
+                    'has_photographer_assigned' => (bool) $booking->photographer_user_id,
+                    'has_photo_link' => (bool) ($booking->photoLink && $booking->photoLink->is_active),
                     'edit_request_status' => $booking->editRequest?->status,
                     'print_order_status' => $booking->printOrder?->status,
                     'has_review' => (bool) $booking->review,
 
                     'current_stage' => $currentStage ? [
+                        'id' => $currentStage->id,
+                        'schedule_booking_id' => $currentStage->schedule_booking_id,
                         'stage_key' => $currentStage->stage_key,
                         'stage_name' => $currentStage->stage_name,
+                        'stage_order' => (int) $currentStage->stage_order,
                         'status' => $currentStage->status,
                         'description' => $currentStage->description,
+                        'occurred_at' => optional($currentStage->occurred_at)->toIso8601String(),
+                        'created_at' => optional($currentStage->created_at)->toIso8601String(),
+                        'updated_at' => optional($currentStage->updated_at)->toIso8601String(),
                     ] : [
-                        'stage_key' => 'assign_photographer',
-                        'stage_name' => 'Assign Fotografer',
+                        'id' => null,
+                        'schedule_booking_id' => $booking->id,
+                        'stage_key' => 'booking',
+                        'stage_name' => 'Pemesanan',
+                        'stage_order' => 1,
                         'status' => 'current',
-                        'description' => 'Booking menunggu proses Front Office',
+                        'description' => 'Booking berhasil dibuat.',
+                        'occurred_at' => optional($booking->created_at)->toIso8601String(),
+                        'created_at' => optional($booking->created_at)->toIso8601String(),
+                        'updated_at' => optional($booking->updated_at)->toIso8601String(),
                     ],
 
-                    'timeline' => $timeline,
+                    'timeline' => $timeline->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'schedule_booking_id' => $item->schedule_booking_id,
+                            'stage_key' => $item->stage_key,
+                            'stage_name' => $item->stage_name,
+                            'stage_order' => (int) $item->stage_order,
+                            'status' => $item->status,
+                            'description' => $item->description,
+                            'occurred_at' => optional($item->occurred_at)->toIso8601String(),
+                            'created_at' => optional($item->created_at)->toIso8601String(),
+                            'updated_at' => optional($item->updated_at)->toIso8601String(),
+                        ];
+                    })->values(),
                 ];
             })->values(),
         ]);
     }
 
-    public function show(Request $request, ScheduleBooking $booking)
-    {
-        if ($booking->client_user_id !== $request->user()->id) {
+    public function show(
+        Request $request,
+        ScheduleBooking $booking,
+        BookingTrackingService $trackingService
+    ) {
+        if ((int) $booking->client_user_id !== (int) $request->user()->id) {
             return response()->json([
-                'message' => 'Akses ditolak'
+                'message' => 'Akses ditolak',
             ], 403);
         }
 
+        $booking->load([
+            'package',
+            'payments',
+            'latestPayment',
+            'photographerUser',
+            'moodboards',
+            'photoLink',
+            'editRequest',
+            'printOrder',
+            'review',
+            'trackings',
+        ]);
+
+        $trackingService->syncTrackingState($booking);
+
+        $booking = $booking->fresh([
+            'package',
+            'payments',
+            'latestPayment',
+            'photographerUser',
+            'moodboards',
+            'photoLink',
+            'editRequest',
+            'printOrder',
+            'review',
+            'trackings',
+        ]);
+
         return response()->json([
             'message' => 'Detail booking berhasil diambil',
-            'data' => $booking->load(['package', 'payments', 'photographerUser', 'moodboards'])
+            'data' => $booking,
         ]);
     }
 
@@ -188,7 +248,7 @@ class BookingController extends Controller
 
         if (!$choice) {
             throw ValidationException::withMessages([
-                'start_time' => 'Jadwal ini sudah tidak tersedia. Pilih jadwal lain.'
+                'start_time' => 'Jadwal ini sudah tidak tersedia. Pilih jadwal lain.',
             ]);
         }
 
@@ -199,11 +259,12 @@ class BookingController extends Controller
 
         if ($locationType === 'outdoor' && $locationName === '') {
             throw ValidationException::withMessages([
-                'location_name' => 'Lokasi outdoor wajib diisi.'
+                'location_name' => 'Lokasi outdoor wajib diisi.',
             ]);
         }
 
         $videoAddon = null;
+
         if ($request->filled('video_addon_type')) {
             $videoAddon = BookingAddonSetting::query()
                 ->where('addon_key', $request->video_addon_type)
@@ -215,22 +276,28 @@ class BookingController extends Controller
             'package_id' => $package->id,
             'client_user_id' => $user->id,
             'photographer_user_id' => null,
+
             'client_name' => $user->name,
             'client_phone' => $user->phone,
             'photographer_name' => null,
+
             'booking_date' => Carbon::parse($validated['booking_date'])->toDateString(),
             'start_time' => $choice['start_time'],
             'end_time' => $choice['end_time'],
             'blocked_until' => $choice['blocked_until'],
+
             'duration_minutes' => (int) $package->duration_minutes,
             'extra_duration_units' => $extraUnits,
             'extra_duration_minutes' => (int) ($choice['extra_duration_minutes'] ?? 0),
             'extra_duration_fee' => (int) ($choice['extra_duration_fee'] ?? 0),
+
             'video_addon_type' => $videoAddon?->addon_key,
             'video_addon_name' => $videoAddon?->addon_name,
             'video_addon_price' => (int) ($videoAddon?->price ?? 0),
+
             'location_type' => $locationType,
             'location_name' => $locationName,
+
             'status' => 'pending',
             'source' => 'client',
             'notes' => $validated['notes'] ?? null,
@@ -238,43 +305,44 @@ class BookingController extends Controller
 
         $this->persistMoodboards($booking, $request->file('moodboards', []));
 
-        app(\App\Services\BookingTrackingService::class)->initializeForBooking($booking);
+        app(BookingTrackingService::class)->initializeForBooking($booking);
 
         return response()->json([
-          'message' => 'Booking berhasil dibuat',
-          'data' => [
-              'booking' => $booking->load([
-                  'package',
-                  'moodboards',
-                  'photographerUser',
-                  'payments',
-              ]),
-              'summary' => [
-                  'package_name' => $booking->package->name ?? '-',
-                  'client_name' => $booking->client_name,
-                  'client_phone' => $booking->client_phone,
-                  'location_type' => $booking->location_type,
-                  'location_name' => $booking->location_name,
-                  'booking_date' => $booking->booking_date,
-                  'start_time' => $booking->start_time,
-                  'end_time' => $booking->end_time,
-                  'video_addon_name' => $booking->video_addon_name,
-                  'video_addon_price' => (int) $booking->video_addon_price,
-                  'extra_duration_minutes' => (int) $booking->extra_duration_minutes,
-                  'extra_duration_fee' => (int) $booking->extra_duration_fee,
-                  'total_booking_amount' => (int) $booking->total_booking_amount,
-                  'minimum_dp_amount' => (int) $booking->minimum_dp_amount,
-              ],
-              'next_action' => 'payment',
-          ]
-      ], 201);
+            'message' => 'Booking berhasil dibuat',
+            'data' => [
+                'booking' => $booking->load([
+                    'package',
+                    'moodboards',
+                    'photographerUser',
+                    'payments',
+                    'trackings',
+                ]),
+                'summary' => [
+                    'package_name' => $booking->package->name ?? '-',
+                    'client_name' => $booking->client_name,
+                    'client_phone' => $booking->client_phone,
+                    'location_type' => $booking->location_type,
+                    'location_name' => $booking->location_name,
+                    'booking_date' => $booking->booking_date,
+                    'start_time' => $booking->start_time,
+                    'end_time' => $booking->end_time,
+                    'video_addon_name' => $booking->video_addon_name,
+                    'video_addon_price' => (int) $booking->video_addon_price,
+                    'extra_duration_minutes' => (int) $booking->extra_duration_minutes,
+                    'extra_duration_fee' => (int) $booking->extra_duration_fee,
+                    'total_booking_amount' => (int) $booking->total_booking_amount,
+                    'minimum_dp_amount' => (int) $booking->minimum_dp_amount,
+                ],
+                'next_action' => 'payment',
+            ],
+        ], 201);
     }
 
     public function destroy(Request $request, ScheduleBooking $booking)
     {
-        if ($booking->client_user_id !== $request->user()->id) {
+        if ((int) $booking->client_user_id !== (int) $request->user()->id) {
             return response()->json([
-                'message' => 'Akses ditolak'
+                'message' => 'Akses ditolak',
             ], 403);
         }
 
