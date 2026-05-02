@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/providers/app_setting_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/providers/auth_provider.dart';
 import '../../widgets/monoframe_logo_mark.dart';
@@ -201,12 +202,30 @@ class _AuthLoginBottomSheetState extends State<AuthLoginBottomSheet> {
 
                   const SizedBox(height: 18),
 
-                  _AuthSwitchAction(
-                    message: 'Belum punya akun?',
-                    actionText: 'Create Account',
-                    onTap: authProvider.isLoading
-                        ? null
-                        : widget.onOpenRegister,
+                  Builder(
+                    builder: (context) {
+                      final canRegister = context
+                          .watch<AppSettingProvider>()
+                          .setting
+                          .system
+                          .allowClientRegistration;
+
+                      if (!canRegister) {
+                        return const _InlineAuthMessage(
+                          message:
+                              'Registrasi klien sedang dinonaktifkan oleh admin.',
+                          type: _InlineAuthMessageType.error,
+                        );
+                      }
+
+                      return _AuthSwitchAction(
+                        message: 'Belum punya akun?',
+                        actionText: 'Create Account',
+                        onTap: authProvider.isLoading
+                            ? null
+                            : widget.onOpenRegister,
+                      );
+                    },
                   ),
                 ],
               ),

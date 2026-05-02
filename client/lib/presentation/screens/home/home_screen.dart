@@ -680,19 +680,27 @@ class _PromoFallbackBanner extends StatelessWidget {
         ? setting.studio.name.trim()
         : 'MONOFRAME STUDIO';
 
+    final title = setting.clientHome.title.trim().isNotEmpty
+        ? setting.clientHome.title.trim()
+        : 'Temukan Paket Foto Terbaik';
+
     final subtitle = setting.clientHome.subtitle.trim().isNotEmpty
         ? setting.clientHome.subtitle.trim()
         : 'Pilih paket, tentukan jadwal, dan pantau progres langsung dari aplikasi.';
 
+    final imageUrl = setting.clientHome.bannerUrl.trim();
+    final ctaText = setting.clientHome.ctaText.trim().isNotEmpty
+        ? setting.clientHome.ctaText.trim()
+        : 'Lihat Paket';
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(28),
       child: Container(
-        width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 198),
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        height: 180,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(28),
           gradient: AppColors.welcomeDarkGradient,
           boxShadow: [
             BoxShadow(
@@ -702,115 +710,134 @@ class _PromoFallbackBanner extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
         child: Stack(
+          fit: StackFit.expand,
           children: [
+            if (imageUrl.isNotEmpty)
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+
+                  return Container(
+                    color: AppColors.welcomeBlueDark,
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    AppColors.welcomeBlueDark.withOpacity(0.96),
+                    AppColors.welcomeBlueMid.withOpacity(0.78),
+                    AppColors.welcomeBlueLight.withOpacity(
+                      imageUrl.isNotEmpty ? 0.34 : 0.18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             Positioned(
-              right: -20,
-              top: -24,
+              right: -18,
+              top: -26,
               child: Icon(
                 Icons.camera_alt_rounded,
-                size: 126,
+                size: 128,
                 color: Colors.white.withOpacity(0.10),
               ),
             ),
-            Positioned(
-              right: 18,
-              bottom: -28,
-              child: Icon(
-                Icons.photo_camera_back_rounded,
-                size: 92,
-                color: Colors.white.withOpacity(0.06),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 210),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.white.withOpacity(0.16)),
-                  ),
-                  child: Text(
-                    studioName.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      letterSpacing: 1,
-                      fontWeight: FontWeight.w900,
+
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 210),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
                     ),
-                  ),
-                ),
-
-                const SizedBox(height: 13),
-
-                const Text(
-                  'Temukan Paket Foto Terbaik',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    height: 1.12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-
-                const SizedBox(height: 7),
-
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.82),
-                    height: 1.32,
-                    fontSize: 12.2,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.white.withOpacity(0.14),
                       borderRadius: BorderRadius.circular(999),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
                     ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'LIHAT PAKET',
+                    child: Text(
+                      studioName.toUpperCase(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.welcomeBlueDark,
-                        fontSize: 11.5,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        letterSpacing: 1,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      height: 1.08,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.82),
+                      height: 1.35,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      ctaText.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.welcomeBlueDark,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

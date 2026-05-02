@@ -39,6 +39,10 @@ class ClientHomeHeader extends StatelessWidget {
         ? home.subtitle.trim()
         : 'Pilih paket foto, tentukan jadwal, lakukan pembayaran, dan pantau progres hasil foto langsung dari aplikasi.';
 
+    final ctaText = home.ctaText.trim().isNotEmpty
+        ? home.ctaText.trim()
+        : 'Booking';
+
     final showSupportButton = onSupportPressed != null;
 
     return Container(
@@ -86,7 +90,7 @@ class ClientHomeHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const MonoframeLogoMark(size: 56),
+                  _StudioLogo(logoUrl: studio.logoUrl),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -161,7 +165,7 @@ class ClientHomeHeader extends StatelessWidget {
                   Expanded(
                     child: _HeaderActionButton(
                       icon: Icons.calendar_month_rounded,
-                      label: 'Booking',
+                      label: ctaText,
                       onTap: onBookingPressed,
                     ),
                   ),
@@ -180,6 +184,52 @@ class ClientHomeHeader extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StudioLogo extends StatelessWidget {
+  final String logoUrl;
+
+  const _StudioLogo({required this.logoUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanUrl = logoUrl.trim();
+
+    if (cleanUrl.isEmpty) {
+      return const MonoframeLogoMark(size: 56);
+    }
+
+    return Container(
+      width: 56,
+      height: 56,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.20)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.network(
+        cleanUrl,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const MonoframeLogoMark(size: 40),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+
+          return const Center(
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
