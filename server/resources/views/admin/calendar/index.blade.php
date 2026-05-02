@@ -6,10 +6,21 @@
   @php
     use Carbon\Carbon;
 
-    $timelineHeight = ($dayEndHour - $dayStartHour) * $hourRowHeight;
+    $weekHourRowHeight = 52;
+    $dayHourRowHeight = $hourRowHeight;
+
+    $weekHeaderHeight = 70;
+    $dayHeaderHeight = 84;
+
+    $weekTimelineHeight = ($dayEndHour - $dayStartHour) * $weekHourRowHeight;
+    $dayTimelineHeight = ($dayEndHour - $dayStartHour) * $dayHourRowHeight;
+
+    $timelineHeight = $dayTimelineHeight;
     $weekViewDate = $anchorDate->copy();
 
-    $prepareTimelineEvents = function ($events) use ($dayStartHour, $hourRowHeight) {
+    $prepareTimelineEvents = function ($events, $activeHourRowHeight = null) use ($dayStartHour, $hourRowHeight) {
+        $activeHourRowHeight = $activeHourRowHeight ?: $hourRowHeight;
+
         $sorted = collect($events)
             ->sortBy(function ($booking) {
                 return sprintf('%s-%s', $booking->start_time, $booking->end_time);
@@ -76,8 +87,8 @@
             $minutesFromStart = $item['start_min'] - $dayStartHour * 60;
             $durationMinutes = max(30, $item['end_min'] - $item['start_min']);
 
-            $prepared[$i]['top'] = max(0, ($minutesFromStart / 60) * $hourRowHeight);
-            $prepared[$i]['height'] = max(52, ($durationMinutes / 60) * $hourRowHeight - 6);
+            $prepared[$i]['top'] = max(0, ($minutesFromStart / 60) * $activeHourRowHeight);
+            $prepared[$i]['height'] = max(42, ($durationMinutes / 60) * $activeHourRowHeight - 5);
             $prepared[$i]['width'] = 100 / $prepared[$i]['columns'];
             $prepared[$i]['left'] = $item['lane'] * $prepared[$i]['width'];
         }
@@ -286,10 +297,18 @@
 
           {{-- WEEK VIEW --}}
           @elseif ($viewMode === 'week')
-            <div class="timeline-shell" style="--timeline-height: {{ $timelineHeight }}px;">
-              <div class="time-labels" style="height: {{ $timelineHeight }}px;">
+            <div class="timeline-shell week-timeline-shell"
+              style="
+                --timeline-height: {{ $weekTimelineHeight }}px;
+                --calendar-hour-height: {{ $weekHourRowHeight }}px;
+                --calendar-header-height: {{ $weekHeaderHeight }}px;
+              ">
+
+              <div class="time-labels week-time-labels"
+                style="height: {{ $weekHeaderHeight + $weekTimelineHeight }}px;">
                 @for ($hour = $dayStartHour; $hour <= $dayEndHour; $hour++)
-                  <div class="time-label" style="top: {{ ($hour - $dayStartHour) * $hourRowHeight }}px;">
+                  <div class="time-label"
+                    style="top: {{ $weekHeaderHeight + (($hour - $dayStartHour) * $weekHourRowHeight) }}px;">
                     {{ sprintf('%02d:00', $hour) }}
                   </div>
                 @endfor
@@ -300,7 +319,7 @@
                   @php
                     $dateKey = $day->toDateString();
                     $events = collect($bookingsByDate->get($dateKey, collect()))->sortBy('start_time')->values();
-                    $preparedEvents = $prepareTimelineEvents($events);
+                    $preparedEvents = $prepareTimelineEvents($events, $weekHourRowHeight);
                     $isSelected = $selectedDate === $dateKey;
                     $isToday = $dateKey === now()->toDateString();
                   @endphp
@@ -318,7 +337,11 @@
                       </a>
                     </div>
 
-                    <div class="week-track" style="--timeline-height: {{ $timelineHeight }}px;">
+                    <div class="week-track"
+                      style="
+                        --timeline-height: {{ $weekTimelineHeight }}px;
+                        --calendar-hour-height: {{ $weekHourRowHeight }}px;
+                      ">
                       @foreach ($preparedEvents as $entry)
                         @php
                           $booking = $entry['booking'];
@@ -367,10 +390,18 @@
 
           {{-- DAY VIEW --}}
           @else
-            <div class="day-grid" style="--timeline-height: {{ $timelineHeight }}px;">
-              <div class="time-labels" style="height: {{ $timelineHeight }}px;">
+            <div class="day-grid"
+              style="
+                --timeline-height: {{ $dayTimelineHeight }}px;
+                --calendar-hour-height: {{ $dayHourRowHeight }}px;
+                --calendar-header-height: {{ $dayHeaderHeight }}px;
+              ">
+
+              <div class="time-labels day-time-labels"
+                style="height: {{ $dayHeaderHeight + $dayTimelineHeight }}px;">
                 @for ($hour = $dayStartHour; $hour <= $dayEndHour; $hour++)
-                  <div class="time-label" style="top: {{ ($hour - $dayStartHour) * $hourRowHeight }}px;">
+                  <div class="time-label"
+                    style="top: {{ $dayHeaderHeight + (($hour - $dayStartHour) * $dayHourRowHeight) }}px;">
                     {{ sprintf('%02d:00', $hour) }}
                   </div>
                 @endfor
@@ -384,10 +415,14 @@
 
                 @php
                   $dayEvents = collect($bookingsByDate->get($selectedDate, collect()))->sortBy('start_time')->values();
-                  $preparedDayEvents = $prepareTimelineEvents($dayEvents);
+                  $preparedDayEvents = $prepareTimelineEvents($dayEvents, $dayHourRowHeight);
                 @endphp
 
-                <div class="day-track" style="--timeline-height: {{ $timelineHeight }}px;">
+                <div class="day-track"
+                  style="
+                    --timeline-height: {{ $dayTimelineHeight }}px;
+                    --calendar-hour-height: {{ $dayHourRowHeight }}px;
+                  ">
                   @foreach ($preparedDayEvents as $entry)
                     @php
                       $booking = $entry['booking'];
@@ -881,9 +916,9 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 18px;
+      gap: 14px;
       flex-wrap: wrap;
-      padding: 26px 30px;
+      padding: 20px 24px;
       border-bottom: 1px solid var(--mf-border);
       background:
         radial-gradient(circle at top right, rgba(159, 191, 210, 0.18), transparent 35%),
@@ -915,7 +950,7 @@
 
     .calendar-title {
       color: var(--mf-ink);
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 900;
       letter-spacing: -0.02em;
       margin: 0 4px;
@@ -946,21 +981,21 @@
     }
 
     .month-day-name {
-      padding: 16px 12px;
+      padding: 11px 8px;
       text-align: center;
       color: #6e7f96;
       background: #f4f7fb;
       border-right: 1px solid var(--mf-border);
       border-bottom: 1px solid var(--mf-border);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.055em;
+      letter-spacing: 0.045em;
     }
 
     .month-cell {
-      min-height: 160px;
-      padding: 12px;
+      min-height: 118px;
+      padding: 9px;
       border-right: 1px solid var(--mf-border);
       border-bottom: 1px solid var(--mf-border);
       background: #ffffff;
@@ -994,9 +1029,9 @@
       align-items: center;
       justify-content: space-between;
       color: var(--mf-ink);
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 900;
-      margin-bottom: 10px;
+      margin-bottom: 7px;
     }
 
     .month-date small,
@@ -1004,10 +1039,10 @@
       display: inline-flex;
       align-items: center;
       border-radius: 999px;
-      padding: 4px 8px;
+      padding: 3px 6px;
       background: rgba(88, 115, 220, 0.10);
       color: var(--mf-primary);
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 900;
     }
 
@@ -1016,12 +1051,12 @@
       border: 1px solid transparent;
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       text-align: left;
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: 13px;
-      margin-bottom: 7px;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 11px;
+      margin-bottom: 5px;
       text-decoration: none;
       font-weight: 800;
       cursor: pointer;
@@ -1058,17 +1093,23 @@
 
     .month-more {
       color: var(--mf-muted);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
     .timeline-shell {
       display: grid;
-      grid-template-columns: 76px minmax(0, 1fr);
+      grid-template-columns: 64px minmax(0, 1fr);
       min-height: 300px;
       overflow-x: auto;
       background: #ffffff;
+    }
+
+    .week-timeline-shell {
+      grid-template-columns: 58px minmax(0, 1fr);
+      min-height: auto;
+      overflow-x: hidden;
     }
 
     .time-labels {
@@ -1088,10 +1129,24 @@
       font-weight: 900;
     }
 
+    .week-time-labels::before,
+    .day-time-labels::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: var(--calendar-header-height);
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.12), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+      border-bottom: 1px solid var(--mf-border);
+    }
+
     .week-grid {
       display: grid;
-      grid-template-columns: repeat(7, minmax(140px, 1fr));
-      min-width: 980px;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      min-width: 0;
     }
 
     .week-column {
@@ -1104,14 +1159,19 @@
     }
 
     .week-header {
-      min-height: 92px;
-      padding: 16px 10px;
+      height: var(--calendar-header-height, 70px);
+      min-height: var(--calendar-header-height, 70px);
+      padding: 11px 8px;
       border-bottom: 1px solid var(--mf-border);
       text-align: center;
       background: #ffffff;
       position: sticky;
       top: 0;
       z-index: 2;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .week-header.selected {
@@ -1124,18 +1184,18 @@
 
     .week-day-name {
       color: var(--mf-muted);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 900;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .week-day-number {
       color: var(--mf-ink);
-      font-size: 26px;
+      font-size: 22px;
       font-weight: 900;
       line-height: 1;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .week-track,
@@ -1143,8 +1203,12 @@
       position: relative;
       height: var(--timeline-height);
       background:
-        linear-gradient(to bottom, transparent 71px, var(--mf-border) 72px);
-      background-size: 100% 72px;
+        linear-gradient(
+          to bottom,
+          transparent calc(var(--calendar-hour-height, 72px) - 1px),
+          var(--mf-border) var(--calendar-hour-height, 72px)
+        );
+      background-size: 100% var(--calendar-hour-height, 72px);
     }
 
     .day-grid {
@@ -1160,11 +1224,17 @@
     }
 
     .day-header {
-      padding: 20px 24px;
+      height: var(--calendar-header-height, 84px);
+      min-height: var(--calendar-header-height, 84px);
+      padding: 18px 24px;
       border-bottom: 1px solid var(--mf-border);
       background:
         radial-gradient(circle at top right, rgba(159, 191, 210, 0.18), transparent 34%),
         linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .day-header small {
@@ -1218,6 +1288,27 @@
       opacity: 0.95;
       overflow: hidden;
       font-weight: 700;
+    }
+
+    .week-timeline-shell .time-label {
+      font-size: 11px;
+    }
+
+    .week-timeline-shell .timeline-event {
+      border-radius: 13px;
+      padding: 7px 9px;
+      box-shadow: 0 8px 18px rgba(52, 79, 165, 0.10);
+    }
+
+    .week-timeline-shell .timeline-event .title {
+      font-size: 12px;
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+
+    .week-timeline-shell .timeline-event .meta {
+      font-size: 11px;
+      line-height: 1.35;
     }
 
     .timeline-event.selected {

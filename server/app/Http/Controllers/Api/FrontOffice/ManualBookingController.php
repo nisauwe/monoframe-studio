@@ -47,8 +47,10 @@ class ManualBookingController extends Controller
     {
         $request->validate([
             'package_id' => ['required', 'exists:packages,id'],
-            'booking_date' => ['required', 'date'],
+            'booking_date' => ['required', 'date', 'after:today'],
             'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
+        ], [
+            'booking_date.after' => 'Jadwal hanya bisa dipilih minimal H-1. Silakan pilih tanggal mulai besok.',
         ]);
 
         $adminScheduleController = app(\App\Http\Controllers\Admin\ScheduleController::class);

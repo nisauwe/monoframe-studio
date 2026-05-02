@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ScheduleController extends Controller
@@ -60,7 +61,7 @@ class ScheduleController extends Controller
 
         $availableStudioSlots = $daySlots
             ->where('is_active', true)
-            ->filter(fn($slot) => $slot->booked_count < $slot->capacity_total)
+            ->filter(fn ($slot) => $slot->booked_count < $slot->capacity_total)
             ->count();
 
         $bookingMonitoringFilter = $request->get('booking_filter', 'need_payment');
@@ -349,13 +350,26 @@ class ScheduleController extends Controller
             'booking_date' => ['required', 'date'],
             'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
             'add_extra_duration' => ['nullable'],
+            'exclude_booking_id' => ['nullable', 'exists:schedule_bookings,id'],
         ]);
 
         $package = Package::findOrFail($request->package_id);
         $bookingDate = Carbon::parse($request->booking_date)->toDateString();
+        $this->ensureBookingMinimumHMinusOne($bookingDate);
         $extraUnits = $this->requestExtraUnits($request);
+        $excludeBookingId = $request->filled('exclude_booking_id')
+            ? (int) $request->exclude_booking_id
+            : null;
 
-        $choices = $this->buildAvailableSlotChoices($package, $bookingDate, $extraUnits, false);
+        $this->ensureBookingMinimumHMinusOne($bookingDate, $excludeBookingId);
+
+        $choices = $this->buildAvailableSlotChoices(
+            $package,
+            $bookingDate,
+            $extraUnits,
+            false,
+            $excludeBookingId
+        );
 
         return response()->json($choices);
     }
@@ -368,19 +382,35 @@ class ScheduleController extends Controller
             'start_time' => ['required'],
             'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
             'add_extra_duration' => ['nullable'],
+            'exclude_booking_id' => ['nullable', 'exists:schedule_bookings,id'],
         ]);
 
         $package = Package::findOrFail($request->package_id);
         $bookingDate = Carbon::parse($request->booking_date)->toDateString();
         $extraUnits = $this->requestExtraUnits($request);
+        $excludeBookingId = $request->filled('exclude_booking_id')
+            ? (int) $request->exclude_booking_id
+            : null;
 
-        $choice = $this->findChoiceByStartTime($package, $bookingDate, $extraUnits, $request->start_time, false);
+        $choice = $this->findChoiceByStartTime(
+            $package,
+            $bookingDate,
+            $extraUnits,
+            $request->start_time,
+            false,
+            $excludeBookingId
+        );
 
         if (!$choice) {
             return response()->json([]);
         }
 
-        $photographers = $this->readyPhotographersForChoice($bookingDate, $choice, false);
+        $photographers = $this->readyPhotographersForChoice(
+            $bookingDate,
+            $choice,
+            false,
+            $excludeBookingId
+        );
 
         return response()->json(
             $photographers->map(function ($photographer) {
@@ -478,10 +508,232 @@ class ScheduleController extends Controller
 
             $this->persistMoodboards($booking, $request->file('moodboards', []));
 
-            app(\App\Services\BookingTrackingService::class)->initializeForBooking($booking);
+            app(BookingTrackingService::class)->initializeForBooking($booking);
         });
 
         return back()->with('success', 'Booking manual berhasil disimpan.');
+    }
+
+    public function editBooking(ScheduleBooking $scheduleBooking)
+    {
+        $scheduleBooking->load(['package', 'clientUser', 'photographerUser', 'moodboards']);
+
+        $clients = User::where('role', 'Klien')
+            ->orderBy('email')
+            ->get(['id', 'name', 'email', 'phone']);
+
+        $photographers = $this->activePhotographers()
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        $packages = Package::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $videoAddons = $this->videoAddons();
+
+        $selectedDate = $scheduleBooking->booking_date
+            ? Carbon::parse($scheduleBooking->booking_date)->toDateString()
+            : now()->toDateString();
+
+        $dayRule = $this->ruleForDate($selectedDate);
+
+        $extraDurationMinutes = (int) ($dayRule?->extra_duration_minutes ?? 30);
+        $extraDurationFee = (int) ($dayRule?->extra_duration_fee ?? 150000);
+
+        return view('admin.schedules.edit-booking', compact(
+            'scheduleBooking',
+            'clients',
+            'photographers',
+            'packages',
+            'videoAddons',
+            'extraDurationMinutes',
+            'extraDurationFee'
+        ));
+    }
+
+    public function updateBooking(Request $request, ScheduleBooking $scheduleBooking)
+    {
+        $validated = $request->validate([
+            'package_id' => ['required', 'exists:packages,id'],
+            'booking_date' => ['required', 'date'],
+            'start_time' => ['required'],
+            'client_user_id' => ['required', 'exists:users,id'],
+            'client_name' => ['required', 'string', 'max:255'],
+            'client_phone' => ['nullable', 'string', 'max:30'],
+            'photographer_user_id' => ['required', 'exists:users,id'],
+            'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
+            'video_addon_type' => ['nullable', 'in:iphone,camera'],
+            'location_name' => ['nullable', 'string', 'max:255'],
+            'status' => ['required', 'in:pending,confirmed,completed,cancelled'],
+            'payment_status' => ['nullable', 'in:unpaid,pending,failed,dp_paid,partially_paid,paid,fully_paid'],
+            'notes' => ['nullable', 'string'],
+        ], [
+            'package_id.required' => 'Paket foto wajib dipilih.',
+            'booking_date.required' => 'Tanggal booking wajib dipilih.',
+            'start_time.required' => 'Jadwal booking wajib dipilih.',
+            'client_user_id.required' => 'Klien wajib dipilih.',
+            'client_name.required' => 'Nama klien wajib diisi.',
+            'photographer_user_id.required' => 'Fotografer wajib dipilih.',
+            'status.required' => 'Status booking wajib dipilih.',
+        ]);
+
+        $package = Package::findOrFail($validated['package_id']);
+        $client = User::findOrFail($validated['client_user_id']);
+        $photographer = User::findOrFail($validated['photographer_user_id']);
+        $bookingDate = Carbon::parse($validated['booking_date'])->toDateString();
+        $this->ensureBookingMinimumHMinusOne($bookingDate, $scheduleBooking->id);
+        $extraUnits = max(0, min(10, (int) ($validated['extra_duration_units'] ?? 0)));
+        $videoAddon = $this->resolveVideoAddon($request->input('video_addon_type'));
+
+        DB::transaction(function () use (
+            $request,
+            $validated,
+            $scheduleBooking,
+            $package,
+            $client,
+            $photographer,
+            $bookingDate,
+            $extraUnits,
+            $videoAddon
+        ) {
+            $choice = $this->findChoiceByStartTime(
+                $package,
+                $bookingDate,
+                $extraUnits,
+                $request->start_time,
+                true,
+                $scheduleBooking->id
+            );
+
+            if (!$choice) {
+                throw ValidationException::withMessages([
+                    'start_time' => 'Jadwal ini sudah tidak tersedia. Pilih jadwal lain.'
+                ]);
+            }
+
+            $readyPhotographers = $this->readyPhotographersForChoice(
+                $bookingDate,
+                $choice,
+                true,
+                $scheduleBooking->id
+            );
+
+            if (!$readyPhotographers->contains('id', $photographer->id)) {
+                throw ValidationException::withMessages([
+                    'photographer_user_id' => 'Fotografer ini tidak tersedia di jadwal yang dipilih.'
+                ]);
+            }
+
+            $locationType = $this->normalizedLocationType($package);
+            $locationName = $locationType === 'indoor'
+                ? 'Indoor Studio Monoframe'
+                : trim((string) $request->location_name);
+
+            if ($locationType === 'outdoor' && $locationName === '') {
+                throw ValidationException::withMessages([
+                    'location_name' => 'Lokasi outdoor wajib diisi.'
+                ]);
+            }
+
+            $scheduleBooking->update([
+                'package_id' => $package->id,
+                'client_user_id' => $client->id,
+                'photographer_user_id' => $photographer->id,
+
+                'client_name' => $validated['client_name'],
+                'client_phone' => $validated['client_phone'] ?? $client->phone,
+                'photographer_name' => $photographer->name,
+
+                'booking_date' => $bookingDate,
+                'start_time' => $choice['start_time'],
+                'end_time' => $choice['end_time'],
+                'blocked_until' => $choice['blocked_until'],
+                'duration_minutes' => (int) $package->duration_minutes,
+
+                'extra_duration_units' => $extraUnits,
+                'extra_duration_minutes' => (int) ($choice['extra_duration_minutes'] ?? 0),
+                'extra_duration_fee' => (int) ($choice['extra_duration_fee'] ?? 0),
+
+                'video_addon_type' => $videoAddon?->addon_key,
+                'video_addon_name' => $videoAddon?->addon_name,
+                'video_addon_price' => (int) ($videoAddon?->price ?? 0),
+
+                'location_type' => $locationType,
+                'location_name' => $locationName,
+
+                'status' => $validated['status'],
+                'payment_status' => $validated['payment_status'] ?? $scheduleBooking->payment_status,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            app(BookingTrackingService::class)->syncTrackingState($scheduleBooking->fresh());
+        });
+
+        return redirect()
+            ->route('admin.schedules.index', [
+                'tab' => 'booking-monitoring',
+                'booking_filter' => 'all',
+                'booking_search' => $validated['client_name'],
+            ])
+            ->with('success', 'Data booking berhasil diperbarui.');
+    }
+
+    public function destroyBooking(ScheduleBooking $scheduleBooking)
+    {
+        $clientName = $scheduleBooking->client_name ?: 'Klien';
+
+        DB::transaction(function () use ($scheduleBooking) {
+            $scheduleBooking->load([
+                'payments',
+                'trackings',
+                'moodboards',
+                'photoLink',
+                'editRequest',
+                'printOrder',
+                'review',
+            ]);
+
+            /*
+            * Riwayat payment jangan dihapus, supaya data transaksi tetap aman.
+            * Migration payments sudah nullable + nullOnDelete, tapi kita null-kan manual
+            * agar lebih jelas dan aman.
+            */
+            $scheduleBooking->payments()->update([
+                'schedule_booking_id' => null,
+            ]);
+
+            /*
+            * Hapus file moodboard dari storage/public.
+            * Record moodboard sebenarnya cascadeOnDelete, tapi file fisiknya tetap harus dihapus manual.
+            */
+            foreach ($scheduleBooking->moodboards as $moodboard) {
+                if ($moodboard->file_path && Storage::disk('public')->exists($moodboard->file_path)) {
+                    Storage::disk('public')->delete($moodboard->file_path);
+                }
+            }
+
+            /*
+            * Hapus data turunan yang berkaitan langsung dengan booking.
+            * Sebagian tabel sudah cascade, tapi delete manual ini membuat proses lebih aman
+            * kalau ada migration lama yang belum cascade.
+            */
+            $scheduleBooking->trackings()->delete();
+            $scheduleBooking->moodboards()->delete();
+            $scheduleBooking->photoLink()->delete();
+            $scheduleBooking->editRequest()->delete();
+            $scheduleBooking->printOrder()->delete();
+            $scheduleBooking->review()->delete();
+
+            $scheduleBooking->delete();
+        });
+
+        return redirect()
+            ->route('admin.schedules.index', [
+                'tab' => 'booking-monitoring',
+                'booking_filter' => 'all',
+            ])
+            ->with('success', 'Booking atas nama ' . $clientName . ' berhasil dihapus.');
     }
 
     private function activePhotographers()
@@ -544,6 +796,36 @@ class ScheduleController extends Controller
         }
 
         return $request->boolean('add_extra_duration') ? 1 : 0;
+    }
+
+    private function ensureBookingMinimumHMinusOne(string $bookingDate, ?int $excludeBookingId = null): void
+    {
+        $selectedDate = Carbon::parse($bookingDate)->startOfDay();
+        $minimumDate = now()->addDay()->startOfDay();
+
+        if ($selectedDate->gte($minimumDate)) {
+            return;
+        }
+
+        /*
+        * Untuk edit booking:
+        * Kalau booking lama memang sudah berada di tanggal hari ini,
+        * admin masih boleh menyimpan perubahan lain tanpa mengganti tanggal.
+        */
+        if ($excludeBookingId) {
+            $existingBooking = ScheduleBooking::find($excludeBookingId);
+
+            if (
+                $existingBooking
+                && Carbon::parse($existingBooking->booking_date)->toDateString() === $selectedDate->toDateString()
+            ) {
+                return;
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'booking_date' => 'Booking hanya bisa dibuat minimal H-1. Silakan pilih tanggal mulai besok.',
+        ]);
     }
 
     private function ruleForDate(string $bookingDate): ?ScheduleRule
@@ -619,7 +901,8 @@ class ScheduleController extends Controller
         Package $package,
         string $bookingDate,
         int $extraUnits,
-        bool $lock = false
+        bool $lock = false,
+        ?int $excludeBookingId = null
     ): array {
         $rule = $this->ruleForDate($bookingDate);
 
@@ -649,7 +932,8 @@ class ScheduleController extends Controller
                 $bookingDate,
                 $operationalWindows,
                 $indoorCapacity,
-                $lock
+                $lock,
+                $excludeBookingId
             );
         }
 
@@ -669,7 +953,13 @@ class ScheduleController extends Controller
 
             if ($usesStudioCapacity) {
                 $indoorCapacity = max(1, (int) ($rule->indoor_capacity ?? 1));
-                $indoorOverlapCount = $this->indoorOverlapCount($bookingDate, $start, $blockedUntil, $lock);
+                $indoorOverlapCount = $this->indoorOverlapCount(
+                    $bookingDate,
+                    $start,
+                    $blockedUntil,
+                    $lock,
+                    $excludeBookingId
+                );
 
                 if ($indoorOverlapCount >= $indoorCapacity) {
                     continue;
@@ -689,7 +979,12 @@ class ScheduleController extends Controller
                 'extra_duration_fee' => $extraUnits * (int) ($rule->extra_duration_fee ?? 150000),
             ];
 
-            $readyCount = $this->readyPhotographersForChoice($bookingDate, $choice, $lock)->count();
+            $readyCount = $this->readyPhotographersForChoice(
+                $bookingDate,
+                $choice,
+                $lock,
+                $excludeBookingId
+            )->count();
 
             if ($readyCount <= 0) {
                 continue;
@@ -707,37 +1002,60 @@ class ScheduleController extends Controller
         string $bookingDate,
         int $extraUnits,
         string $startTime,
-        bool $lock = false
+        bool $lock = false,
+        ?int $excludeBookingId = null
     ): ?array {
-        return collect($this->buildAvailableSlotChoices($package, $bookingDate, $extraUnits, $lock))
-            ->firstWhere('start_time', $startTime);
+        $normalizedStartTime = strlen($startTime) === 5
+            ? $startTime . ':00'
+            : $startTime;
+
+        return collect($this->buildAvailableSlotChoices(
+            $package,
+            $bookingDate,
+            $extraUnits,
+            $lock,
+            $excludeBookingId
+        ))->firstWhere('start_time', $normalizedStartTime);
     }
 
-    private function readyPhotographersForChoice(string $bookingDate, array $choice, bool $lock = false): Collection
-    {
+    private function readyPhotographersForChoice(
+        string $bookingDate,
+        array $choice,
+        bool $lock = false,
+        ?int $excludeBookingId = null
+    ): Collection {
         $start = Carbon::parse($bookingDate . ' ' . $choice['start_time']);
         $blockedUntil = Carbon::parse($bookingDate . ' ' . $choice['blocked_until']);
 
         return $this->activePhotographers()
             ->orderBy('name')
             ->get(['id', 'name', 'email'])
-            ->filter(function ($photographer) use ($bookingDate, $start, $blockedUntil, $lock) {
+            ->filter(function ($photographer) use ($bookingDate, $start, $blockedUntil, $lock, $excludeBookingId) {
                 return !$this->hasPhotographerConflict(
                     $photographer->id,
                     $bookingDate,
                     $start,
                     $blockedUntil,
-                    $lock
+                    $lock,
+                    $excludeBookingId
                 );
             })
             ->values();
     }
 
-    private function photographerBlockedIntervals(int $photographerId, string $bookingDate, bool $lock = false): array
-    {
-        $query = ScheduleBooking::where('booking_date', $bookingDate)
+    private function photographerBlockedIntervals(
+        int $photographerId,
+        string $bookingDate,
+        bool $lock = false,
+        ?int $excludeBookingId = null
+    ): array {
+        $query = ScheduleBooking::whereDate('booking_date', $bookingDate)
             ->where('photographer_user_id', $photographerId)
             ->whereIn('status', ['pending', 'confirmed', 'completed']);
+
+        if ($excludeBookingId) {
+            $query->where('id', '!=', $excludeBookingId);
+        }
 
         if ($lock) {
             $query->lockForUpdate();
@@ -751,11 +1069,18 @@ class ScheduleController extends Controller
         })->all();
     }
 
-    private function indoorBlockedIntervals(string $bookingDate, bool $lock = false): array
-    {
-        $query = ScheduleBooking::where('booking_date', $bookingDate)
+    private function indoorBlockedIntervals(
+        string $bookingDate,
+        bool $lock = false,
+        ?int $excludeBookingId = null
+    ): array {
+        $query = ScheduleBooking::whereDate('booking_date', $bookingDate)
             ->where('location_type', 'indoor')
             ->whereIn('status', ['pending', 'confirmed', 'completed']);
+
+        if ($excludeBookingId) {
+            $query->where('id', '!=', $excludeBookingId);
+        }
 
         if ($lock) {
             $query->lockForUpdate();
@@ -773,9 +1098,10 @@ class ScheduleController extends Controller
         string $bookingDate,
         array $operationalWindows,
         int $capacity,
-        bool $lock = false
+        bool $lock = false,
+        ?int $excludeBookingId = null
     ): array {
-        $intervals = $this->indoorBlockedIntervals($bookingDate, $lock);
+        $intervals = $this->indoorBlockedIntervals($bookingDate, $lock, $excludeBookingId);
 
         if ($capacity <= 1) {
             return $this->subtractIntervals($operationalWindows, $intervals);
@@ -811,6 +1137,7 @@ class ScheduleController extends Controller
                 }
 
                 $count = 0;
+
                 foreach ($intervals as $interval) {
                     if ($interval['start']->lt($segEnd) && $interval['end']->gt($segStart)) {
                         $count++;
@@ -855,7 +1182,7 @@ class ScheduleController extends Controller
             return $windows;
         }
 
-        usort($intervals, fn($a, $b) => $a['start']->timestamp <=> $b['start']->timestamp);
+        usort($intervals, fn ($a, $b) => $a['start']->timestamp <=> $b['start']->timestamp);
 
         $result = [];
 
@@ -912,7 +1239,7 @@ class ScheduleController extends Controller
             return [];
         }
 
-        usort($windows, fn($a, $b) => $a['start']->timestamp <=> $b['start']->timestamp);
+        usort($windows, fn ($a, $b) => $a['start']->timestamp <=> $b['start']->timestamp);
 
         $merged = [];
         $current = array_shift($windows);
@@ -946,44 +1273,34 @@ class ScheduleController extends Controller
         string $bookingDate,
         Carbon $start,
         Carbon $blockedUntil,
-        bool $lock = false
+        bool $lock = false,
+        ?int $excludeBookingId = null
     ): bool {
-        $query = ScheduleBooking::where('booking_date', $bookingDate)
-            ->where('photographer_user_id', $photographerId)
-            ->whereIn('status', ['pending', 'confirmed', 'completed']);
-
-        if ($lock) {
-            $query->lockForUpdate();
+        foreach ($this->photographerBlockedIntervals($photographerId, $bookingDate, $lock, $excludeBookingId) as $interval) {
+            if ($interval['start']->lt($blockedUntil) && $interval['end']->gt($start)) {
+                return true;
+            }
         }
 
-        return $query->get()->contains(function ($booking) use ($bookingDate, $start, $blockedUntil) {
-            $existingStart = Carbon::parse($bookingDate . ' ' . $booking->start_time);
-            $existingEnd = Carbon::parse($bookingDate . ' ' . ($booking->blocked_until ?: $booking->end_time));
-
-            return $existingStart < $blockedUntil && $existingEnd > $start;
-        });
+        return false;
     }
 
     private function indoorOverlapCount(
         string $bookingDate,
         Carbon $start,
         Carbon $blockedUntil,
-        bool $lock = false
+        bool $lock = false,
+        ?int $excludeBookingId = null
     ): int {
-        $query = ScheduleBooking::where('booking_date', $bookingDate)
-            ->where('location_type', 'indoor')
-            ->whereIn('status', ['pending', 'confirmed', 'completed']);
+        $count = 0;
 
-        if ($lock) {
-            $query->lockForUpdate();
+        foreach ($this->indoorBlockedIntervals($bookingDate, $lock, $excludeBookingId) as $interval) {
+            if ($interval['start']->lt($blockedUntil) && $interval['end']->gt($start)) {
+                $count++;
+            }
         }
 
-        return $query->get()->filter(function ($booking) use ($bookingDate, $start, $blockedUntil) {
-            $existingStart = Carbon::parse($bookingDate . ' ' . $booking->start_time);
-            $existingEnd = Carbon::parse($bookingDate . ' ' . ($booking->blocked_until ?: $booking->end_time));
-
-            return $existingStart < $blockedUntil && $existingEnd > $start;
-        })->count();
+        return $count;
     }
 
     private function buildTimeRowsFromRule(string $bookingDate, ?ScheduleRule $rule): Collection

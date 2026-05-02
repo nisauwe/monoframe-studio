@@ -1,11 +1,10 @@
 <?php
 // Variables
 return [
-  "creatorName" => "ThemeSelection",
-  "creatorUrl" => "https://themeselection.com",
-  "templateName" => "sneat",
-  "templateSuffix" => "Sneat Bootstrap Dashboard FREE",
-  "templateVersion" => "2.0.0",
+  "creatorName" => "Monoframe",
+  "creatorUrl" => "#",
+  "templateName" => "Monoframe",
+  "templateSuffix" => "Studio Management",
   "templateFree" => true,
   "templateDescription" => "Most Powerful & Comprehensive Bootstrap 5 + Laravel HTML Admin Dashboard Template built for developers!",
   "templateKeyword" => "dashboard, bootstrap 5 dashboard, bootstrap 5 design, bootstrap 5",

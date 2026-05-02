@@ -9,6 +9,7 @@ use App\Models\PhotoLink;
 use App\Models\PrintOrder;
 use App\Models\Review;
 use App\Models\ScheduleBooking;
+use App\Models\BookingCancelLog;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -125,8 +126,10 @@ class DashboardController extends Controller
 
         $activities = $activities
             ->merge($this->bookingActivities())
+            ->merge($this->bookingCancelActivities())
             ->merge($this->photographerAssignmentActivities())
             ->merge($this->paymentActivities())
+            ->merge($this->failedPaymentActivities())
             ->merge($this->photoLinkActivities())
             ->merge($this->editRequestActivities())
             ->merge($this->printOrderActivities())
@@ -176,6 +179,41 @@ class DashboardController extends Controller
                     activity: $activity,
                     occurredAt: $booking->created_at,
                     type: 'booking'
+                );
+            });
+    }
+
+    private function bookingCancelActivities(): Collection
+    {
+        if (!Schema::hasTable('booking_cancel_logs')) {
+            return collect();
+        }
+
+        return BookingCancelLog::with(['clientUser'])
+            ->latest('cancelled_at')
+            ->latest('created_at')
+            ->limit(160)
+            ->get()
+            ->map(function (BookingCancelLog $cancelLog) {
+                $clientName = $cancelLog->clientUser?->name
+                    ?? $cancelLog->client_name
+                    ?? data_get($cancelLog->snapshot, 'cancelled_by.name')
+                    ?? 'Klien';
+
+                $reason = trim((string) ($cancelLog->cancel_reason ?? ''));
+
+                $activity = 'membatalkan booking ' . $this->bookingCancelScheduleSentence($cancelLog);
+
+                if ($reason !== '') {
+                    $activity .= '. Alasan: ' . $reason;
+                }
+
+                return $this->activityRow(
+                    name: $clientName,
+                    role: 'Klien',
+                    activity: $activity,
+                    occurredAt: $cancelLog->cancelled_at ?? $cancelLog->created_at,
+                    type: 'booking_cancel'
                 );
             });
     }
@@ -251,6 +289,69 @@ class DashboardController extends Controller
                     activity: $activity,
                     occurredAt: $payment->paid_at ?? $payment->settled_at ?? $payment->updated_at ?? $payment->created_at,
                     type: 'payment'
+                );
+            });
+    }
+
+    private function failedPaymentActivities(): Collection
+    {
+        if (!Schema::hasTable('payments')) {
+            return collect();
+        }
+
+        $failedStatuses = [
+            'expire',
+            'expired',
+            'cancel',
+            'cancelled',
+            'deny',
+            'failure',
+            'failed',
+        ];
+
+        return Payment::with([
+                'scheduleBooking.package',
+                'scheduleBooking.clientUser',
+                'printOrder.client',
+            ])
+            ->whereIn('transaction_status', $failedStatuses)
+            ->latest('updated_at')
+            ->limit(120)
+            ->get()
+            ->map(function (Payment $payment) {
+                $booking = $payment->scheduleBooking;
+                $client = $booking?->clientUser ?? $payment->printOrder?->client;
+
+                $clientName = $client?->name
+                    ?? $booking?->client_name
+                    ?? 'Klien';
+
+                $amount = (int) ($payment->base_amount ?: $payment->gross_amount);
+
+                $statusLabel = match ($payment->transaction_status) {
+                    'expire', 'expired' => 'kedaluwarsa',
+                    'cancel', 'cancelled' => 'dibatalkan',
+                    'deny' => 'ditolak',
+                    'failure', 'failed' => 'gagal',
+                    default => 'tidak berhasil',
+                };
+
+                if ($payment->print_order_id) {
+                    $activity = 'pembayaran cetak foto ' . $statusLabel . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                } elseif ($payment->payment_stage === 'dp') {
+                    $activity = 'pembayaran DP ' . $statusLabel . ' untuk ' . $this->bookingScheduleSentence($booking) . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                } elseif (in_array($payment->payment_stage, ['full', 'pelunasan', 'remaining'], true)) {
+                    $activity = 'pembayaran pelunasan ' . $statusLabel . ' untuk ' . $this->bookingScheduleSentence($booking) . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                } else {
+                    $activity = 'pembayaran ' . $statusLabel . ' untuk ' . $this->bookingScheduleSentence($booking) . ' sebesar Rp ' . number_format($amount, 0, ',', '.');
+                }
+
+                return $this->activityRow(
+                    name: $clientName,
+                    role: 'Klien',
+                    activity: $activity,
+                    occurredAt: $payment->updated_at ?? $payment->created_at,
+                    type: 'payment_failed'
                 );
             });
     }
@@ -481,6 +582,45 @@ class DashboardController extends Controller
         $end = $booking->end_time
             ? Carbon::parse($booking->end_time)->format('H:i')
             : null;
+
+        if ($start && $end) {
+            $time = $start . ' - ' . $end;
+        } elseif ($start) {
+            $time = $start;
+        } else {
+            $time = '-';
+        }
+
+        return 'untuk paket ' . $packageName . ' pada tanggal ' . $date . ' jam ' . $time;
+    }
+
+    private function bookingCancelScheduleSentence(BookingCancelLog $cancelLog): string
+    {
+        $packageName = $cancelLog->package_name ?: 'paket foto';
+
+        try {
+            $date = $cancelLog->booking_date
+                ? Carbon::parse($cancelLog->booking_date)->translatedFormat('d F Y')
+                : '-';
+        } catch (\Throwable $exception) {
+            $date = $cancelLog->booking_date ?: '-';
+        }
+
+        try {
+            $start = $cancelLog->start_time
+                ? Carbon::parse($cancelLog->start_time)->format('H:i')
+                : null;
+        } catch (\Throwable $exception) {
+            $start = $cancelLog->start_time ?: null;
+        }
+
+        try {
+            $end = $cancelLog->end_time
+                ? Carbon::parse($cancelLog->end_time)->format('H:i')
+                : null;
+        } catch (\Throwable $exception) {
+            $end = $cancelLog->end_time ?: null;
+        }
 
         if ($start && $end) {
             $time = $start . ' - ' . $end;

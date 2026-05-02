@@ -7,17 +7,19 @@ use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
 {
-  public function index(Request $request)
-  {
-    $request->validate([
-      'package_id' => ['required', 'exists:packages,id'],
-      'booking_date' => ['required', 'date'],
-      'add_extra_duration' => ['nullable', 'boolean'],
-    ]);
+    public function index(Request $request)
+    {
+        $request->validate([
+            'package_id' => ['required', 'exists:packages,id'],
+            'booking_date' => ['required', 'date', 'after:today'],
+            'add_extra_duration' => ['nullable', 'boolean'],
+            'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
+        ], [
+            'booking_date.after' => 'Jadwal hanya bisa dipilih minimal H-1. Silakan pilih tanggal mulai besok.',
+        ]);
 
-    // Reuse sementara logic admin agar hasil slot sama persis.
-    $adminScheduleController = app(\App\Http\Controllers\Admin\ScheduleController::class);
+        $adminScheduleController = app(\App\Http\Controllers\Admin\ScheduleController::class);
 
-    return $adminScheduleController->availableSlots($request);
-  }
+        return $adminScheduleController->availableSlots($request);
+    }
 }

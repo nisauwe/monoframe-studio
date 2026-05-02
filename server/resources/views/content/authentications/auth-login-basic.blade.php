@@ -16,8 +16,13 @@
                     <!-- Logo -->
                     <div class="app-brand justify-content-center">
                         <a href="{{ url('/') }}" class="app-brand-link gap-2">
-                            <span class="app-brand-logo demo">@include('_partials.macros')</span>
-                            <span class="app-brand-text demo text-heading fw-bold">{{ config('variables.templateName') }}</span>
+                            <span class="app-brand-logo demo">
+                                <img
+                                    src="{{ asset('assets/img/logo/monoframe-logo.png') }}"
+                                    alt="Monoframe Logo"
+                                    style="width: 42px; height: 42px; object-fit: contain;">
+                            </span>
+                            <span class="app-brand-text demo text-heading fw-bold">MONOFRAME</span>
                         </a>
                     </div>
                     <!-- /Logo -->

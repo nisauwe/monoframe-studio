@@ -94,20 +94,20 @@
 
         <div class="package-hero-actions">
           @if ($currentTab === 'categories')
-            <button type="button" class="btn package-hero-btn" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+            <a href="{{ route('admin.categories.create') }}" class="btn package-hero-btn">
               <i class="bx bx-plus me-1"></i>
               Tambah Kategori
-            </button>
+            </a>
           @elseif ($currentTab === 'photo-packages')
             <a href="{{ route('admin.packages.create') }}" class="btn package-hero-btn">
               <i class="bx bx-plus me-1"></i>
               Tambah Paket
             </a>
           @elseif ($currentTab === 'print-prices')
-            <button type="button" class="btn package-hero-btn" data-bs-toggle="modal" data-bs-target="#createPrintPriceModal">
+            <a href="{{ route('admin.print-prices.create') }}" class="btn package-hero-btn">
               <i class="bx bx-plus me-1"></i>
               Tambah Paket Cetak
-            </button>
+            </a>
           @elseif ($currentTab === 'discounts')
             <a href="{{ route('admin.discounts.create') }}" class="btn package-hero-btn">
               <i class="bx bx-plus me-1"></i>
@@ -223,10 +223,10 @@
                       <i class="bx bx-category-alt"></i>
                       <h6>Belum ada kategori</h6>
                       <p>Tambahkan kategori agar paket foto bisa dikelompokkan.</p>
-                      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+                      <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
                         <i class="bx bx-plus me-1"></i>
                         Tambah Kategori
-                      </button>
+                      </a>
                     </div>
                   @endforelse
                 </div>
@@ -323,18 +323,28 @@
                       </div>
                     </form>
 
-                    <form
-                      action="{{ route('admin.categories.destroy', $selectedCategory->id) }}"
-                      method="POST"
-                      onsubmit="return confirm('Yakin ingin menghapus kategori ini?')">
-                      @csrf
-                      @method('DELETE')
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                      <a
+                        href="{{ route('admin.categories.edit', $selectedCategory->id) }}"
+                        class="btn btn-outline-primary">
+                        <i class="bx bx-edit-alt me-1"></i>
+                        Edit Kategori
+                      </a>
 
-                      <button type="submit" class="btn btn-outline-danger">
-                        <i class="bx bx-trash me-1"></i>
-                        Hapus Kategori
-                      </button>
-                    </form>
+                      <form
+                        action="{{ route('admin.categories.destroy', $selectedCategory->id) }}"
+                        method="POST"
+                        onsubmit="return confirm('Yakin ingin menghapus kategori ini?')"
+                        class="m-0">
+                        @csrf
+                        @method('DELETE')
+
+                        <button type="submit" class="btn btn-outline-danger">
+                          <i class="bx bx-trash me-1"></i>
+                          Hapus Kategori
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 @else
                   <div class="package-empty-state">
@@ -433,7 +443,6 @@
 
                           <div>
                             <div class="package-name">{{ $package->name }}</div>
-                            <div class="package-subtext">ID Paket #{{ $package->id }}</div>
                           </div>
                         </div>
                       </td>
@@ -606,7 +615,6 @@
 
                           <div>
                             <div class="package-name">{{ $item->size_label }}</div>
-                            <div class="package-subtext">ID Cetak #{{ $item->id }}</div>
                           </div>
                         </div>
                       </td>
@@ -685,10 +693,10 @@
                           <i class="bx bx-printer"></i>
                           <h6>Belum ada paket cetak</h6>
                           <p>Tambahkan paket cetak agar klien bisa memilih ukuran cetak foto.</p>
-                          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPrintPriceModal">
+                          <a href="{{ route('admin.print-prices.create') }}" class="btn btn-primary">
                             <i class="bx bx-plus me-1"></i>
                             Tambah Paket Cetak
-                          </button>
+                          </a>
                         </div>
                       </td>
                     </tr>

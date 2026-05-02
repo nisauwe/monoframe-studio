@@ -244,9 +244,6 @@
                           <div class="user-name">
                             {{ $user->name }}
                           </div>
-                          <div class="user-subtext">
-                            ID User #{{ $user->id }}
-                          </div>
                         </div>
                       </div>
                     </td>
@@ -578,13 +575,6 @@
       color: var(--mf-ink);
       font-weight: 900;
       line-height: 1.35;
-    }
-
-    .user-subtext {
-      color: var(--mf-muted);
-      font-size: 12px;
-      font-weight: 600;
-      margin-top: 3px;
     }
 
     .user-email,

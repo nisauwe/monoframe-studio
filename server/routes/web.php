@@ -87,6 +87,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
   Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
   Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+
+  Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+  Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+
   Route::patch('/categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
   Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
@@ -117,7 +121,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
   Route::get('/schedules/available-slots', [ScheduleController::class, 'availableSlots'])->name('schedules.available-slots');
   Route::get('/schedules/available-photographers', [ScheduleController::class, 'availablePhotographers'])->name('schedules.available-photographers');
   Route::post('/schedules/manual-request', [ScheduleController::class, 'storeManualRequest'])->name('schedules.manual-request.store');
-
+  Route::get('/schedules/bookings/{scheduleBooking}/edit', [ScheduleController::class, 'editBooking'])->name('schedules.bookings.edit');
+  Route::put('/schedules/bookings/{scheduleBooking}', [ScheduleController::class, 'updateBooking'])->name('schedules.bookings.update');
+  Route::delete('/schedules/bookings/{scheduleBooking}', [ScheduleController::class, 'destroyBooking'])->name('schedules.bookings.destroy');
   Route::put('/schedules/addon-settings', [ScheduleController::class, 'updateAddonSettings'])->name('schedules.addon-settings.update');
 
   Route::get('/calendar', [CalendarController::class, 'index'])->middleware('permission:calendar.view')->name('calendar.index');

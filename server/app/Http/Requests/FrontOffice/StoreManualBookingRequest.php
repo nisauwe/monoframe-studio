@@ -15,7 +15,7 @@ class StoreManualBookingRequest extends FormRequest
     {
         return [
             'package_id' => ['required', 'exists:packages,id'],
-            'booking_date' => ['required', 'date'],
+            'booking_date' => ['required', 'date', 'after:today'],
             'start_time' => ['required'],
             'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:10'],
 
@@ -32,6 +32,19 @@ class StoreManualBookingRequest extends FormRequest
 
             'moodboards' => ['nullable', 'array', 'max:10'],
             'moodboards.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'booking_date.after' => 'Booking manual hanya bisa dibuat minimal H-1. Silakan pilih tanggal mulai besok.',
+            'booking_date.required' => 'Tanggal booking wajib dipilih.',
+            'package_id.required' => 'Paket foto wajib dipilih.',
+            'start_time.required' => 'Jam booking wajib dipilih.',
+            'photographer_user_id.required' => 'Fotografer wajib dipilih.',
+            'client_name.required' => 'Nama klien wajib diisi.',
+            'client_phone.required' => 'Nomor HP klien wajib diisi.',
         ];
     }
 }

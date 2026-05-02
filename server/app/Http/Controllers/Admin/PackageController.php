@@ -8,6 +8,7 @@ use App\Models\Package;
 use App\Models\Discount;
 use App\Models\PrintPrice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PackageController extends Controller
 {
@@ -152,41 +153,71 @@ class PackageController extends Controller
 
   public function update(Request $request, Package $package)
   {
-    $validated = $request->validate([
-      'category_id' => 'required|exists:categories,id',
-      'name' => 'required|string|max:255',
-      'price' => 'required|numeric|min:0',
-      'photo_count' => 'required|integer|min:0',
-      'duration_minutes' => 'required|integer|min:0',
-      'location_type' => 'required|in:indoor,outdoor',
-      'person_count' => 'nullable|integer|min:1',
-      'portfolio' => 'nullable|array|max:20',
-      'portfolio.*' => 'image|mimes:jpg,jpeg,png,webp|max:10240',
-      'description' => 'nullable|string',
-      'is_active' => 'nullable|boolean',
-    ]);
+      $validated = $request->validate([
+          'category_id' => 'required|exists:categories,id',
+          'name' => 'required|string|max:255',
+          'price' => 'required|numeric|min:0',
+          'photo_count' => 'required|integer|min:0',
+          'duration_minutes' => 'required|integer|min:0',
+          'location_type' => 'required|in:indoor,outdoor',
+          'person_count' => 'nullable|integer|min:1',
+          'portfolio' => 'nullable|array|max:20',
+          'portfolio.*' => 'image|mimes:jpg,jpeg,png,webp|max:10240',
+          'remove_portfolio' => 'nullable|array',
+          'remove_portfolio.*' => 'nullable|string',
+          'description' => 'nullable|string',
+          'is_active' => 'nullable|boolean',
+      ]);
 
-    $validated['is_active'] = $request->boolean('is_active');
+      $validated['is_active'] = $request->boolean('is_active');
 
-    if ($request->hasFile('portfolio')) {
-      $portfolioPaths = [];
+      $currentPortfolio = is_array($package->portfolio)
+          ? $package->portfolio
+          : [];
 
-      foreach ($request->file('portfolio') as $image) {
-        $portfolioPaths[] = $image->store('packages/portfolio', 'public');
+      $removedPortfolio = $request->input('remove_portfolio', []);
+
+      if (!empty($removedPortfolio)) {
+          foreach ($removedPortfolio as $removedImage) {
+              if (in_array($removedImage, $currentPortfolio, true)) {
+                  Storage::disk('public')->delete($removedImage);
+              }
+          }
+
+          $currentPortfolio = array_values(array_filter($currentPortfolio, function ($image) use ($removedPortfolio) {
+              return !in_array($image, $removedPortfolio, true);
+          }));
       }
 
-      $validated['portfolio'] = $portfolioPaths;
-    } else {
-      unset($validated['portfolio']);
-    }
+      $newPortfolioPaths = [];
 
-    $package->update($validated);
+      if ($request->hasFile('portfolio')) {
+          foreach ($request->file('portfolio') as $image) {
+              $newPortfolioPaths[] = $image->store('packages/portfolio', 'public');
+          }
+      }
 
-    return redirect()
-      ->route('admin.packages.index', [
-        'tab' => 'photo-packages',
-      ])
-      ->with('success', 'Paket berhasil diperbarui.');
+      $finalPortfolio = array_values(array_merge($currentPortfolio, $newPortfolioPaths));
+
+      if (count($finalPortfolio) > 20) {
+          return back()
+              ->withErrors([
+                  'portfolio' => 'Maksimal total 20 gambar portofolio.',
+              ])
+              ->withInput();
+      }
+
+      $validated['portfolio'] = !empty($finalPortfolio) ? $finalPortfolio : null;
+
+      unset($validated['remove_portfolio']);
+
+      $package->update($validated);
+
+      return redirect()
+          ->route('admin.packages.index', [
+              'tab' => 'photo-packages',
+          ])
+          ->with('success', 'Paket berhasil diperbarui.');
   }
 
   public function destroy(Package $package)

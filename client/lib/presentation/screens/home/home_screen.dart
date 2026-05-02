@@ -239,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onDetail: _openPackageDetail,
           ),
 
-        const SizedBox(height: 26),
+        const SizedBox(height: 24),
 
         const _SectionTitle(title: 'Kategori'),
 
@@ -315,7 +315,7 @@ class _SearchLikeBox extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Container(
-        height: 54,
+        height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           gradient: AppColors.welcomeCardGradient,
@@ -680,14 +680,19 @@ class _PromoFallbackBanner extends StatelessWidget {
         ? setting.studio.name.trim()
         : 'MONOFRAME STUDIO';
 
+    final subtitle = setting.clientHome.subtitle.trim().isNotEmpty
+        ? setting.clientHome.subtitle.trim()
+        : 'Pilih paket, tentukan jadwal, dan pantau progres langsung dari aplikasi.';
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(30),
       child: Container(
-        height: 168,
-        padding: const EdgeInsets.all(18),
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 198),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(30),
           gradient: AppColors.welcomeDarkGradient,
           boxShadow: [
             BoxShadow(
@@ -697,29 +702,41 @@ class _PromoFallbackBanner extends StatelessWidget {
             ),
           ],
         ),
+        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
             Positioned(
-              right: -18,
-              top: -26,
+              right: -20,
+              top: -24,
               child: Icon(
                 Icons.camera_alt_rounded,
-                size: 128,
+                size: 126,
                 color: Colors.white.withOpacity(0.10),
+              ),
+            ),
+            Positioned(
+              right: 18,
+              bottom: -28,
+              child: Icon(
+                Icons.photo_camera_back_rounded,
+                size: 92,
+                color: Colors.white.withOpacity(0.06),
               ),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  constraints: const BoxConstraints(maxWidth: 190),
+                  constraints: const BoxConstraints(maxWidth: 210),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
+                    horizontal: 11,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.14),
                     borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white.withOpacity(0.16)),
                   ),
                   child: Text(
                     studioName.toUpperCase(),
@@ -733,45 +750,63 @@ class _PromoFallbackBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 13),
+
                 const Text(
                   'Temukan Paket Foto Terbaik',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 21,
-                    height: 1.08,
+                    fontSize: 20,
+                    height: 1.12,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 6),
+
+                const SizedBox(height: 7),
+
                 Text(
-                  setting.clientHome.subtitle.isNotEmpty
-                      ? setting.clientHome.subtitle
-                      : 'Pilih paket, tentukan jadwal, dan pantau progres langsung dari aplikasi.',
+                  subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.82),
-                    height: 1.35,
-                    fontSize: 12.5,
+                    height: 1.32,
+                    fontSize: 12.2,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'LIHAT PAKET',
-                    style: TextStyle(
-                      color: AppColors.welcomeBlueDark,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
+
+                const SizedBox(height: 16),
+
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'LIHAT PAKET',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.welcomeBlueDark,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
@@ -1720,7 +1755,35 @@ class _EmptyMiniText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(color: AppColors.grey));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.58),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.72)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 19,
+            color: AppColors.welcomeBlueDark.withOpacity(0.54),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: AppColors.welcomeBlueDark.withOpacity(0.58),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

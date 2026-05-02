@@ -12,16 +12,34 @@ class DioClient {
     return _instance;
   }
 
-  // GANTI IP INI SESUAI IP LAPTOP/SERVER LARAVEL KAMU
-  static const String _serverHost = '10.157.71.14';
-  static const String _serverPort = '8000';
+  // URL publik dari Cloudflare Tunnel kamu.
+  // Untuk API pakai /api.
+  static const String _apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://soma-ferry-kept-acdbentity.trycloudflare.com/api',
+  );
+
+  // Untuk file publik/storage JANGAN pakai /api.
+  static const String _publicBaseUrl = String.fromEnvironment(
+    'PUBLIC_BASE_URL',
+    defaultValue: 'https://soma-ferry-kept-acdbentity.trycloudflare.com',
+  );
+
+  // Daftar host lokal/lama yang mungkin masih dikirim dari backend/database.
+  // Kalau backend mengirim URL lama seperti http://10.157.71.14:8000/storage/xxx,
+  // function normalizePublicUrl akan otomatis mengubahnya ke URL Cloudflare.
+  static const List<String> _localOrOldHosts = [
+    'localhost',
+    '127.0.0.1',
+    '10.157.71.14',
+  ];
 
   static String get baseApiUrl {
-    return 'http://$_serverHost:$_serverPort/api';
+    return _apiBaseUrl;
   }
 
   static String get publicBaseUrl {
-    return 'http://$_serverHost:$_serverPort';
+    return _publicBaseUrl;
   }
 
   late final Dio dio =
@@ -31,7 +49,10 @@ class DioClient {
             connectTimeout: const Duration(seconds: 30),
             sendTimeout: const Duration(seconds: 60),
             receiveTimeout: const Duration(seconds: 60),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
           ),
         )
         ..interceptors.add(
@@ -90,13 +111,15 @@ class DioClient {
         path = path.replaceFirst('/api/storage/', '/storage/');
       }
 
-      final isLocalhost = uri.host == 'localhost' || uri.host == '127.0.0.1';
-      final isSameServer = uri.host == _serverHost;
+      final isLocalOrOldServer = _localOrOldHosts.contains(uri.host);
 
-      if ((isLocalhost || isSameServer) && path.startsWith('/storage/')) {
+      // Kalau backend/database masih mengirim URL lokal/lama,
+      // paksa ubah ke URL Cloudflare.
+      if (isLocalOrOldServer && path.startsWith('/storage/')) {
         return '$publicBaseUrl$path';
       }
 
+      // Kalau sudah URL online dan path-nya storage, biarkan domain aslinya.
       if (path.startsWith('/storage/')) {
         final port = uri.hasPort ? ':${uri.port}' : '';
         return '${uri.scheme}://${uri.host}$port$path';
@@ -141,6 +164,10 @@ class DioClient {
     }
 
     cleaned = cleaned.replaceFirst(RegExp(r'^/+'), '');
+
+    if (cleaned.startsWith('api/storage/')) {
+      cleaned = cleaned.replaceFirst('api/storage/', 'storage/');
+    }
 
     if (cleaned.startsWith('storage/')) {
       return cleaned;

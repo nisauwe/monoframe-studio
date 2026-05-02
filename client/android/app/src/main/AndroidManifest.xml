@@ -17,7 +17,7 @@
     </queries>
 
     <application
-        android:label="client"
+        android:label="Monoframe Studio"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

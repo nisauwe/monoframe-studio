@@ -1,3 +1,9 @@
+import '../../data/services/dio_client.dart';
+
 class ApiConfig {
-  static const String baseUrl = 'http://10.145.99.14:8000/api';
+  static const String baseUrl =
+      'https://soma-ferry-kept-acdbentity.trycloudflare.com/api';
+
+  static const String publicUrl =
+      'https://soma-ferry-kept-acdbentity.trycloudflare.com';
 }

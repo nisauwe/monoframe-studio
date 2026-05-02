@@ -225,7 +225,7 @@ class BookingController extends Controller
 
         $validated = $request->validate([
             'package_id' => ['required', 'exists:packages,id'],
-            'booking_date' => ['required', 'date'],
+            'booking_date' => ['required', 'date', 'after:today'],
             'start_time' => ['required'],
             'extra_duration_units' => ['nullable', 'integer', 'min:0', 'max:' . $maxExtraUnits],
             'location_name' => ['nullable', 'string', 'max:255'],

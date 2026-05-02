@@ -4,32 +4,72 @@
 
 @section('content')
   @php
+    $currentTab = $activeTab ?? $selectedTab ?? request('tab', 'operational');
+
+    $bookingMonitoringFilter = $bookingMonitoringFilter ?? request('booking_filter', 'need_payment');
+    $bookingMonitoringSearch = $bookingMonitoringSearch ?? request('booking_search', '');
+
+    $bookingMonitoringStats = $bookingMonitoringStats ?? [
+        'all' => 0,
+        'need_payment' => 0,
+        'running' => 0,
+        'completed' => 0,
+    ];
+
+    $bookingMonitoringList = collect($bookingMonitoringList ?? []);
+
+    $minimumBookingDate = now()->addDay()->toDateString();
+
+    $manualBookingDate = old('booking_date');
+
+    if (!$manualBookingDate) {
+        $manualBookingDate = \Carbon\Carbon::parse($selectedDate)->lt(now()->addDay()->startOfDay())
+            ? $minimumBookingDate
+            : $selectedDate;
+    }
+
     $tabs = [
         [
             'key' => 'operational',
             'label' => 'Operasional',
             'icon' => 'bx bx-cog',
-            'target' => '#tab-operational',
+            'url' => route('admin.schedules.index', [
+                'tab' => 'operational',
+                'date' => $selectedDate,
+            ]),
         ],
         [
             'key' => 'daily',
             'label' => 'Jadwal Harian',
             'icon' => 'bx bx-calendar',
-            'target' => '#tab-daily',
+            'url' => route('admin.schedules.index', [
+                'tab' => 'daily',
+                'date' => $selectedDate,
+            ]),
         ],
         [
             'key' => 'booking-monitoring',
             'label' => 'Monitoring Booking',
             'icon' => 'bx bx-list-check',
-            'target' => '#tab-booking-monitoring',
+            'url' => route('admin.schedules.index', [
+                'tab' => 'booking-monitoring',
+                'date' => $selectedDate,
+                'booking_filter' => $bookingMonitoringFilter,
+                'booking_search' => $bookingMonitoringSearch,
+            ]),
         ],
         [
             'key' => 'manual',
             'label' => 'Booking Manual',
             'icon' => 'bx bx-edit-alt',
-            'target' => '#tab-manual',
+            'url' => route('admin.schedules.index', [
+                'tab' => 'manual',
+                'date' => $manualBookingDate,
+            ]),
         ],
     ];
+
+    $selectedTab = $currentTab;
 
     $statCards = [
         [
@@ -61,18 +101,6 @@
             'class' => 'success',
         ],
     ];
-
-    $bookingMonitoringFilter = $bookingMonitoringFilter ?? request('booking_filter', 'need_payment');
-    $bookingMonitoringSearch = $bookingMonitoringSearch ?? request('booking_search', '');
-
-    $bookingMonitoringStats = $bookingMonitoringStats ?? [
-        'all' => 0,
-        'need_payment' => 0,
-        'running' => 0,
-        'completed' => 0,
-    ];
-
-    $bookingMonitoringList = collect($bookingMonitoringList ?? []);
   @endphp
 
   <div class="container-xxl flex-grow-1 container-p-y">
@@ -150,19 +178,15 @@
 
       {{-- TAB MENU --}}
       <div class="schedule-tabs-card mb-4">
-        <ul class="nav schedule-tabs" role="tablist">
+        <ul class="nav schedule-tabs">
           @foreach ($tabs as $tab)
             <li class="nav-item">
-              <button
-                type="button"
-                class="nav-link {{ $selectedTab === $tab['key'] ? 'active' : '' }}"
-                data-bs-toggle="tab"
-                data-bs-target="{{ $tab['target'] }}"
-                data-schedule-tab="{{ $tab['key'] }}"
-                role="tab">
+              <a
+                href="{{ $tab['url'] }}"
+                class="nav-link {{ $selectedTab === $tab['key'] ? 'active' : '' }}">
                 <i class="{{ $tab['icon'] }} me-1"></i>
                 {{ $tab['label'] }}
-              </button>
+              </a>
             </li>
           @endforeach
         </ul>
@@ -172,8 +196,6 @@
 
         {{-- TAB OPERASIONAL --}}
         <div class="tab-pane fade {{ $selectedTab === 'operational' ? 'show active' : '' }}" id="tab-operational" role="tabpanel">
-
-          {{-- OPERASIONAL RULES --}}
           <div class="card section-card schedule-index-card mb-4">
             <div class="card-header">
               <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
@@ -203,7 +225,6 @@
                         <tr>
                           <th rowspan="2" class="rule-day">Hari</th>
                           <th rowspan="2" class="rule-switch-wrap group-divider-right">Aktif</th>
-
                           <th colspan="4" class="text-center group-divider-right">Indoor</th>
                           <th colspan="3" class="text-center group-divider-right">Outdoor</th>
                           <th colspan="2" class="text-center">Umum</th>
@@ -213,11 +234,9 @@
                           <th>Jam Tutup</th>
                           <th>Kapasitas Indoor</th>
                           <th class="group-divider-right">Jeda Indoor</th>
-
                           <th>Jam Buka</th>
                           <th>Jam Tutup</th>
                           <th class="group-divider-right">Jeda Outdoor</th>
-
                           <th>Extra Menit / Step</th>
                           <th>Biaya / Step</th>
                         </tr>
@@ -399,8 +418,6 @@
 
         {{-- TAB JADWAL HARIAN --}}
         <div class="tab-pane fade {{ $selectedTab === 'daily' ? 'show active' : '' }}" id="tab-daily" role="tabpanel">
-
-          {{-- FILTER TANGGAL --}}
           <div class="card section-card schedule-index-card mb-4">
             <div class="card-header">
               <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
@@ -437,7 +454,6 @@
             </div>
           </div>
 
-          {{-- LIST JADWAL --}}
           <div class="row g-4">
             @forelse ($photographers as $photographer)
               @php
@@ -611,7 +627,7 @@
                 <div class="col-lg-2">
                   <a href="{{ route('admin.schedules.index', ['tab' => 'booking-monitoring', 'booking_filter' => $bookingMonitoringFilter]) }}"
                     class="btn btn-outline-secondary w-100">
-                    Reset
+                    Refresh
                   </a>
                 </div>
               </form>
@@ -638,6 +654,11 @@
 
                     $clientInitial = strtoupper(mb_substr($booking->client_name ?: 'K', 0, 1));
                     $modalId = 'bookingTrackingModal' . $booking->id;
+                    $deleteModalId = 'deleteBookingModal' . $booking->id;
+
+                    $bookingTotalAmount = (int) ($booking->total_booking_amount ?? 0);
+                    $bookingPaidAmount = (int) ($booking->paid_booking_amount ?? 0);
+                    $bookingRemainingAmount = (int) ($booking->remaining_booking_amount ?? 0);
                   @endphp
 
                   <div class="col-12">
@@ -695,6 +716,23 @@
                         </div>
                       </div>
 
+                      <div class="booking-payment-summary">
+                        <div class="booking-payment-summary-item total">
+                          <span>Total Harga</span>
+                          <strong>Rp {{ number_format($bookingTotalAmount, 0, ',', '.') }}</strong>
+                        </div>
+
+                        <div class="booking-payment-summary-item paid">
+                          <span>Sudah Bayar</span>
+                          <strong>Rp {{ number_format($bookingPaidAmount, 0, ',', '.') }}</strong>
+                        </div>
+
+                        <div class="booking-payment-summary-item remaining">
+                          <span>Sisa Bayar</span>
+                          <strong>Rp {{ number_format($bookingRemainingAmount, 0, ',', '.') }}</strong>
+                        </div>
+                      </div>
+
                       <div class="booking-progress-wrap">
                         <div class="booking-progress-head">
                           <span>Progress Tracking</span>
@@ -714,6 +752,23 @@
                           </strong>
                         </div>
 
+                       <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <a
+                          href="{{ route('admin.schedules.bookings.edit', $booking->id) }}"
+                          class="btn btn-outline-primary">
+                          <i class="bx bx-edit-alt me-1"></i>
+                          Edit Booking
+                        </a>
+
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#{{ $deleteModalId }}">
+                          <i class="bx bx-trash me-1"></i>
+                          Hapus Booking
+                        </button>
+
                         <button type="button"
                           class="btn btn-primary"
                           data-bs-toggle="modal"
@@ -721,6 +776,97 @@
                           <i class="bx bx-show me-1"></i>
                           Lihat Tracking
                         </button>
+                      </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {{-- MODAL HAPUS BOOKING --}}
+                  <div class="modal fade booking-delete-modal" id="{{ $deleteModalId }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content border-0 shadow-lg">
+                        <div class="modal-header border-0 pb-0">
+                          <div>
+                            <h5 class="modal-title fw-bold text-danger">
+                              Hapus Booking?
+                            </h5>
+                            <p class="text-muted mb-0">
+                              Tindakan ini akan menghapus booking dari daftar monitoring.
+                            </p>
+                          </div>
+
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                          <div class="alert alert-warning mb-4">
+                            <div class="d-flex gap-2">
+                              <i class="bx bx-error-circle fs-4"></i>
+                              <div>
+                                <strong>Perhatian!</strong>
+                                <div>
+                                  Booking akan dihapus permanen. Riwayat pembayaran tetap dipertahankan, tapi tidak lagi terhubung ke booking ini.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="delete-booking-summary">
+                            <div>
+                              <span>Klien</span>
+                              <strong>{{ $booking->client_name ?: '-' }}</strong>
+                            </div>
+
+                            <div>
+                              <span>Paket</span>
+                              <strong>{{ $booking->package->name ?? 'Paket Foto' }}</strong>
+                            </div>
+
+                            <div>
+                              <span>Tanggal</span>
+                              <strong>{{ $bookingDateLabel }}</strong>
+                            </div>
+
+                            <div>
+                              <span>Jam</span>
+                              <strong>{{ $startTime }} - {{ $endTime }}</strong>
+                            </div>
+
+                            <div>
+                              <span>Total Harga</span>
+                              <strong>Rp {{ number_format($bookingTotalAmount, 0, ',', '.') }}</strong>
+                            </div>
+
+                            <div>
+                              <span>Sudah Bayar</span>
+                              <strong>Rp {{ number_format($bookingPaidAmount, 0, ',', '.') }}</strong>
+                            </div>
+
+                            <div>
+                              <span>Sisa Bayar</span>
+                              <strong>Rp {{ number_format($bookingRemainingAmount, 0, ',', '.') }}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="modal-footer border-0 pt-0">
+                          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Batal
+                          </button>
+
+                          <form
+                            action="{{ route('admin.schedules.bookings.destroy', $booking->id) }}"
+                            method="POST"
+                            class="d-inline">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit" class="btn btn-danger">
+                              <i class="bx bx-trash me-1"></i>
+                              Ya, Hapus Booking
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -735,7 +881,7 @@
                               Tracking Booking - {{ $booking->client_name ?: 'Klien' }}
                             </h5>
                             <small class="text-white opacity-75">
-                              Admin hanya dapat memantau status tracking. Tidak ada aksi edit di halaman ini.
+                              Admin hanya dapat memantau status tracking.
                             </small>
                           </div>
 
@@ -768,23 +914,34 @@
                             </div>
 
                             <div class="admin-tracking-summary-item">
-                              <div class="admin-tracking-summary-label">Pembayaran</div>
+                              <div class="admin-tracking-summary-label">Total Harga</div>
                               <div class="admin-tracking-summary-value">
-                                {{ $item['payment_label'] ?? '-' }}
+                                Rp {{ number_format($bookingTotalAmount, 0, ',', '.') }}
                                 <br>
                                 <span class="text-muted">
-                                  Dibayar Rp {{ number_format($booking->paid_booking_amount ?? 0, 0, ',', '.') }}
+                                  Total paket + extra durasi + add-on video
                                 </span>
                               </div>
                             </div>
 
                             <div class="admin-tracking-summary-item">
-                              <div class="admin-tracking-summary-label">Sisa Tagihan</div>
+                              <div class="admin-tracking-summary-label">Sudah Bayar</div>
                               <div class="admin-tracking-summary-value">
-                                Rp {{ number_format($booking->remaining_booking_amount ?? 0, 0, ',', '.') }}
+                                Rp {{ number_format($bookingPaidAmount, 0, ',', '.') }}
                                 <br>
                                 <span class="text-muted">
-                                  Total Rp {{ number_format($booking->total_booking_amount ?? 0, 0, ',', '.') }}
+                                  {{ $item['payment_label'] ?? '-' }}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div class="admin-tracking-summary-item">
+                              <div class="admin-tracking-summary-label">Sisa Bayar</div>
+                              <div class="admin-tracking-summary-value">
+                                Rp {{ number_format($bookingRemainingAmount, 0, ',', '.') }}
+                                <br>
+                                <span class="text-muted">
+                                  Tagihan yang masih perlu dilunasi
                                 </span>
                               </div>
                             </div>
@@ -914,7 +1071,8 @@
                   <div>
                     <h5 class="section-title">Tambah Booking Manual</h5>
                     <p class="section-subtitle mb-0">
-                      Pilih paket dan tanggal dulu, lalu pilih jadwal, baru pilih fotografer yang tersedia.
+                      Booking manual hanya dapat dibuat minimal H-1. Tanggal paling cepat adalah
+                      {{ \Carbon\Carbon::parse($minimumBookingDate)->translatedFormat('d F Y') }}.
                     </p>
                   </div>
                 </div>
@@ -943,8 +1101,10 @@
                               <option
                                 value="{{ $package->id }}"
                                 data-duration="{{ $package->duration_minutes }}"
-                                data-location="{{ strtolower(trim($package->location_type)) }}">
-                                {{ $package->name }} ({{ $package->duration_minutes }} menit)
+                                data-location="{{ strtolower(trim($package->location_type)) }}"
+                                data-price="{{ $package->discounted_price ?? $package->price }}">
+                                {{ $package->name }} - Rp {{ number_format($package->discounted_price ?? $package->price, 0, ',', '.') }}
+                                ({{ $package->duration_minutes }} menit)
                               </option>
                             @endforeach
                           </select>
@@ -974,11 +1134,9 @@
                           <label class="form-label">Extra Duration</label>
                           <select name="extra_duration_units" id="extraDurationUnits" class="form-select">
                             <option value="0">Tidak ada extra durasi</option>
-                            <option value="1">+ 30 menit</option>
-                            <option value="2">+ 60 menit</option>
-                            <option value="3">+ 90 menit</option>
-                            <option value="4">+ 120 menit</option>
-                            <option value="5">+ 150 menit</option>
+                            @for ($unit = 1; $unit <= 5; $unit++)
+                              <option value="{{ $unit }}">+ {{ $extraDurationMinutes * $unit }} menit</option>
+                            @endfor
                           </select>
                           <small class="text-muted d-block mt-1">
                             Biaya Rp {{ number_format($extraDurationFee, 0, ',', '.') }} per {{ $extraDurationMinutes }} menit
@@ -988,18 +1146,33 @@
 
                       <div class="summary-card mt-3">
                         <div>
-                          <small>Durasi total</small>
+                          <small>Durasi Total</small>
                           <strong id="summaryDuration">-</strong>
                         </div>
 
                         <div>
-                          <small>Biaya extra durasi</small>
+                          <small>Harga Paket</small>
+                          <strong id="summaryPackagePrice">Rp 0</strong>
+                        </div>
+
+                        <div>
+                          <small>Biaya Extra</small>
                           <strong id="summaryExtraFee">Rp 0</strong>
                         </div>
 
                         <div>
-                          <small>Biaya add-on video</small>
+                          <small>Biaya Video</small>
                           <strong id="summaryVideoFee">Rp 0</strong>
+                        </div>
+
+                        <div>
+                          <small>Total Harga</small>
+                          <strong id="summaryTotalPrice">Rp 0</strong>
+                        </div>
+
+                        <div>
+                          <small>Sisa Bayar</small>
+                          <strong id="summaryRemainingAmount">Rp 0</strong>
                         </div>
                       </div>
                     </div>
@@ -1049,7 +1222,17 @@
                       <div class="row g-3">
                         <div class="col-md-6">
                           <label class="form-label">Tanggal Booking</label>
-                          <input type="date" name="booking_date" id="bookingDate" class="form-control" value="{{ $selectedDate }}" required>
+                          <input
+                            type="date"
+                            name="booking_date"
+                            id="bookingDate"
+                            class="form-control"
+                            value="{{ $manualBookingDate }}"
+                            min="{{ $minimumBookingDate }}"
+                            required>
+                          <small class="text-muted d-block mt-1">
+                            Tidak bisa memilih hari ini. Tanggal paling cepat: {{ \Carbon\Carbon::parse($minimumBookingDate)->translatedFormat('d F Y') }}.
+                          </small>
                         </div>
 
                         <div class="col-md-6">
@@ -1155,7 +1338,7 @@
                   <li>Pilih add-on video jika perlu.</li>
                   <li>Pilih jumlah extra duration.</li>
                   <li>Pilih klien.</li>
-                  <li>Pilih tanggal booking.</li>
+                  <li>Pilih tanggal booking minimal besok.</li>
                   <li>Pilih jadwal yang tersedia.</li>
                   <li>Pilih fotografer yang ready.</li>
                   <li>Isi lokasi jika paket outdoor.</li>
@@ -2094,6 +2277,78 @@
       position: relative;
     }
 
+
+    .booking-payment-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .booking-payment-summary-item {
+      border: 1px solid var(--mf-border);
+      border-radius: 18px;
+      padding: 14px;
+      background: #ffffff;
+    }
+
+    .booking-payment-summary-item span {
+      display: block;
+      color: var(--mf-muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    .booking-payment-summary-item strong {
+      color: var(--mf-ink);
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .booking-payment-summary-item.total {
+      background: rgba(88, 115, 220, 0.08);
+    }
+
+    .booking-payment-summary-item.paid {
+      background: rgba(47, 177, 140, 0.10);
+    }
+
+    .booking-payment-summary-item.remaining {
+      background: rgba(255, 171, 0, 0.12);
+    }
+
+    .delete-booking-summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .delete-booking-summary div {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 14px;
+      border: 1px solid var(--mf-border);
+      border-radius: 16px;
+      background: #f8fbfd;
+    }
+
+    .delete-booking-summary span {
+      color: var(--mf-muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .delete-booking-summary strong {
+      color: var(--mf-ink);
+      font-size: 13px;
+      font-weight: 900;
+      text-align: right;
+    }
+
     @media (max-width: 991px) {
       .schedule-hero-card {
         align-items: flex-start;
@@ -2116,6 +2371,10 @@
       .booking-monitoring-meta,
       .admin-tracking-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .booking-payment-summary {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -2161,22 +2420,13 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      document.querySelectorAll('[data-schedule-tab]').forEach(tabButton => {
-        tabButton.addEventListener('shown.bs.tab', function () {
-          const tab = this.dataset.scheduleTab;
-          const url = new URL(window.location.href);
-          url.searchParams.set('tab', tab);
-          history.replaceState({}, '', url.toString());
-        });
-      });
-
       const detailModalEl = document.getElementById('dailyBookingDetailModal');
 
       if (detailModalEl && detailModalEl.parentElement !== document.body) {
         document.body.appendChild(detailModalEl);
       }
 
-      document.querySelectorAll('.booking-tracking-modal').forEach(modal => {
+      document.querySelectorAll('.booking-tracking-modal, .booking-delete-modal').forEach(modal => {
         if (modal.parentElement !== document.body) {
           document.body.appendChild(modal);
         }
@@ -2201,6 +2451,8 @@
         modal.show();
       });
 
+      const minimumBookingDate = '{{ $minimumBookingDate }}';
+
       const clientSelect = document.getElementById('clientSelect');
       const clientName = document.getElementById('clientName');
       const clientPhone = document.getElementById('clientPhone');
@@ -2223,8 +2475,11 @@
       const locationName = document.getElementById('locationName');
 
       const summaryDuration = document.getElementById('summaryDuration');
+      const summaryPackagePrice = document.getElementById('summaryPackagePrice');
       const summaryExtraFee = document.getElementById('summaryExtraFee');
       const summaryVideoFee = document.getElementById('summaryVideoFee');
+      const summaryTotalPrice = document.getElementById('summaryTotalPrice');
+      const summaryRemainingAmount = document.getElementById('summaryRemainingAmount');
 
       const extraDurationStepMinutes = {{ (int) $extraDurationMinutes }};
       const extraDurationStepFee = {{ (int) $extraDurationFee }};
@@ -2264,17 +2519,37 @@
 
         const selected = packageSelect.options[packageSelect.selectedIndex];
         const duration = parseInt(selected?.dataset?.duration || '0', 10);
+        const packagePrice = parseInt(selected?.dataset?.price || '0', 10);
         const rawLocation = (selected?.dataset?.location || '').toLowerCase().trim();
+
         const extraUnits = parseInt(extraDurationUnits?.value || '0', 10);
         const extra = extraUnits * extraDurationStepMinutes;
+        const extraFee = extraUnits * extraDurationStepFee;
         const totalDuration = duration + extra;
 
         const selectedVideoOption = videoAddonType?.options?.[videoAddonType.selectedIndex];
         const videoFee = parseInt(selectedVideoOption?.dataset?.price || '0', 10);
 
+        const totalPrice = packagePrice + extraFee + videoFee;
+        const paidAmount = 0;
+        const remainingAmount = totalPrice - paidAmount;
+
         summaryDuration.textContent = totalDuration > 0 ? totalDuration + ' menit' : '-';
-        summaryExtraFee.textContent = formatRupiah(extraUnits * extraDurationStepFee);
+
+        if (summaryPackagePrice) {
+          summaryPackagePrice.textContent = formatRupiah(packagePrice);
+        }
+
+        summaryExtraFee.textContent = formatRupiah(extraFee);
         summaryVideoFee.textContent = formatRupiah(videoFee);
+
+        if (summaryTotalPrice) {
+          summaryTotalPrice.textContent = formatRupiah(totalPrice);
+        }
+
+        if (summaryRemainingAmount) {
+          summaryRemainingAmount.textContent = formatRupiah(remainingAmount);
+        }
 
         let locationType = '';
 
@@ -2325,7 +2600,7 @@
         slotButtons.innerHTML = '';
         resetSlotSelection();
 
-        if (!slots.length) {
+        if (!Array.isArray(slots) || !slots.length) {
           slotButtons.innerHTML = '<div class="text-muted small">Tidak ada jadwal kosong untuk pilihan ini.</div>';
           return;
         }
@@ -2354,6 +2629,22 @@
         });
       }
 
+      function extractErrorMessage(data, fallbackMessage) {
+        if (data?.message) {
+          return data.message;
+        }
+
+        if (data?.errors) {
+          const firstKey = Object.keys(data.errors)[0];
+
+          if (firstKey && Array.isArray(data.errors[firstKey]) && data.errors[firstKey].length) {
+            return data.errors[firstKey][0];
+          }
+        }
+
+        return fallbackMessage;
+      }
+
       async function loadAvailableSlots() {
         if (!slotButtons || !packageSelect || !bookingDate) return;
 
@@ -2369,6 +2660,12 @@
           return;
         }
 
+        if (date < minimumBookingDate) {
+          slotButtons.innerHTML = '<div class="text-danger small">Booking manual hanya bisa dibuat minimal H-1. Silakan pilih tanggal mulai besok.</div>';
+          resetSlotSelection();
+          return;
+        }
+
         try {
           const params = new URLSearchParams({
             package_id: packageId,
@@ -2378,6 +2675,11 @@
 
           const response = await fetch(`{{ route('admin.schedules.available-slots') }}?${params.toString()}`);
           const data = await response.json();
+
+          if (!response.ok) {
+            slotButtons.innerHTML = `<div class="text-danger small">${extractErrorMessage(data, 'Gagal memuat jadwal tersedia.')}</div>`;
+            return;
+          }
 
           renderSlotButtons(data);
         } catch (error) {
@@ -2392,6 +2694,11 @@
         const date = bookingDate.value;
         const startTime = selectedStartTime.value;
         const extraUnits = extraDurationUnits?.value || 0;
+
+        if (date < minimumBookingDate) {
+          resetPhotographers();
+          return;
+        }
 
         photographerSelect.disabled = true;
         photographerSelect.innerHTML = '<option value="">Memuat fotografer...</option>';
@@ -2409,7 +2716,13 @@
 
           photographerSelect.innerHTML = '';
 
-          if (!data.length) {
+          if (!response.ok) {
+            photographerSelect.innerHTML = '<option value="">Gagal memuat fotografer</option>';
+            photographerSelect.disabled = true;
+            return;
+          }
+
+          if (!Array.isArray(data) || !data.length) {
             photographerSelect.innerHTML = '<option value="">Tidak ada fotografer yang ready</option>';
             photographerSelect.disabled = true;
             return;
@@ -2472,6 +2785,13 @@
           if (totalFiles > 10) {
             e.preventDefault();
             alert('Moodboard maksimal 10 file.');
+            return;
+          }
+
+          if (bookingDate && bookingDate.value < minimumBookingDate) {
+            e.preventDefault();
+            alert('Booking manual hanya bisa dibuat minimal H-1. Silakan pilih tanggal mulai besok.');
+            return;
           }
         });
       }
@@ -2479,7 +2799,10 @@
       populateClient();
       handlePackageLocation();
       updateMoodboardInfo();
-      loadAvailableSlots();
+
+      if (document.getElementById('tab-manual')?.classList.contains('active')) {
+        loadAvailableSlots();
+      }
     });
   </script>
 @endsection

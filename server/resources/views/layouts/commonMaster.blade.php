@@ -23,7 +23,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <link rel="canonical" href="{{ config('variables.productPage') ? config('variables.productPage') : '' }}" />
-    <link rel="icon" type="image/x-icon" href="{{ asset('assets/img/favicon/favicon.ico') }}" />
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon/monoframe-favicon.png') }}?v=2" />
 
     @include('layouts/sections/styles')
     @include('layouts/sections/scriptsIncludes')

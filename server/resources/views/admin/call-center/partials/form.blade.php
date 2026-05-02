@@ -46,13 +46,13 @@
   </div>
 
   <div class="col-md-6">
-    <label class="form-label" for="{{ $prefix }}_contact_value">Kontak / Username / Nomor / Email</label>
+    <label class="form-label" for="{{ $prefix }}_contact_value">Email</label>
     <input
       type="text"
       class="form-control"
       id="{{ $prefix }}_contact_value"
       name="contact_value"
-      placeholder="Contoh: 0813xxxx / @monoframe / email"
+      placeholder="Contoh: contact@monoframe.com"
       required
     >
   </div>

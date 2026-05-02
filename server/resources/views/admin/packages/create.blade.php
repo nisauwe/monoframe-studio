@@ -4,32 +4,48 @@
 
 @section('content')
   <div class="container-xxl flex-grow-1 container-p-y">
-    <div class="dashboard-shell">
+    <div class="package-create-shell">
 
-      {{-- PAGE HEADER --}}
-      <div class="dashboard-heading">
-        <div>
-          <h4 class="dashboard-title mb-1">Tambah Paket Baru</h4>
-          <p class="dashboard-date mb-0">
-            Tambahkan paket layanan foto, harga, durasi, detail edit, dan portofolio studio.
-          </p>
+      {{-- HERO HEADER --}}
+      <div class="package-create-hero mb-4">
+        <div class="package-create-hero-left">
+          <div class="package-create-hero-icon">
+            <i class="bx bx-camera"></i>
+          </div>
+
+          <div>
+            <div class="package-create-kicker">MANAJEMEN PAKET FOTO</div>
+            <h4>Tambah Paket Baru</h4>
+            <p>
+              Tambahkan paket layanan foto, harga, durasi, jumlah foto edit,
+              jenis lokasi, deskripsi, status, dan portofolio paket Monoframe Studio.
+            </p>
+          </div>
         </div>
 
-        <a href="{{ route('admin.packages.index', ['tab' => 'photo-packages']) }}" class="btn btn-outline-secondary">
-          <i class="bx bx-arrow-back me-1"></i>
-          Kembali
-        </a>
+        <div class="package-create-hero-actions">
+          <a href="{{ route('admin.packages.index', ['tab' => 'photo-packages']) }}" class="btn package-create-back-btn">
+            <i class="bx bx-arrow-back me-1"></i>
+            Kembali
+          </a>
+        </div>
       </div>
 
       {{-- ALERT ERROR --}}
       @if ($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-          <strong>Terjadi kesalahan.</strong>
-          <ul class="mb-0 mt-2 ps-3">
-            @foreach ($errors->all() as $error)
-              <li>{{ $error }}</li>
-            @endforeach
-          </ul>
+        <div class="alert alert-danger alert-dismissible fade show mb-4 package-create-alert" role="alert">
+          <div class="d-flex gap-2">
+            <i class="bx bx-error-circle mt-1"></i>
+            <div>
+              <strong>Terjadi kesalahan.</strong>
+              <ul class="mb-0 mt-2 ps-3">
+                @foreach ($errors->all() as $error)
+                  <li>{{ $error }}</li>
+                @endforeach
+              </ul>
+            </div>
+          </div>
+
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
       @endif
@@ -40,24 +56,28 @@
         <div class="row g-4">
           {{-- LEFT CONTENT --}}
           <div class="col-xl-8 col-lg-7">
-            <div class="card section-card package-create-card">
+            <div class="card package-create-card">
               <div class="card-header">
                 <div>
-                  <h5 class="section-title">Informasi Paket</h5>
-                  <p class="section-subtitle mb-0">
-                    Lengkapi detail paket foto yang akan ditampilkan pada sistem Monoframe.
+                  <h5 class="mb-1">Form Tambah Paket</h5>
+                  <p class="mb-0">
+                    Lengkapi data paket foto yang akan ditampilkan pada sistem dan aplikasi klien.
                   </p>
                 </div>
               </div>
 
-              <div class="card-body package-create-body">
+              <div class="card-body">
 
-                {{-- UPLOAD FILE --}}
-                <div class="create-section">
-                  <div class="create-section-heading">
+                {{-- UPLOAD PORTFOLIO --}}
+                <div class="package-form-section">
+                  <div class="package-section-heading">
+                    <div class="package-section-icon">
+                      <i class="bx bx-images"></i>
+                    </div>
+
                     <div>
                       <h6>Upload Portofolio</h6>
-                      <p>Pilih maksimal 20 gambar. Format JPG, JPEG, PNG, atau WEBP.</p>
+                      <p>Pilih gambar portofolio untuk paket ini. Maksimal 20 gambar.</p>
                     </div>
                   </div>
 
@@ -71,13 +91,14 @@
                       multiple>
 
                     <div class="upload-icon">
-                      <i class="bx bx-upload"></i>
+                      <i class="bx bx-cloud-upload"></i>
                     </div>
 
-                    <h6>Upload file portofolio</h6>
-                    <p>Drag & drop gambar ke sini atau klik tombol di bawah.</p>
+                    <h6>Upload gambar portofolio</h6>
+                    <p>Drag & drop gambar ke area ini, atau klik tombol di bawah.</p>
 
-                    <label for="portfolioImages" class="btn btn-primary upload-btn">
+                    <label for="portfolioImages" class="btn btn-primary upload-btn" id="browsePortfolioBtn">
+                      <i class="bx bx-folder-open me-1"></i>
                       Browse File
                     </label>
 
@@ -91,17 +112,21 @@
                 </div>
 
                 {{-- MAIN DETAILS --}}
-                <div class="create-section">
-                  <div class="create-section-heading">
+                <div class="package-form-section">
+                  <div class="package-section-heading">
+                    <div class="package-section-icon">
+                      <i class="bx bx-detail"></i>
+                    </div>
+
                     <div>
                       <h6>Detail Utama</h6>
-                      <p>Masukkan nama paket, kategori, harga, durasi, dan jumlah foto edit.</p>
+                      <p>Masukkan nama paket, kategori, harga, durasi, jumlah edit, dan lokasi.</p>
                     </div>
                   </div>
 
                   <div class="row g-3">
                     <div class="col-md-6">
-                      <label class="form-label">Nama Paket</label>
+                      <label for="packageName" class="form-label">Nama Paket</label>
                       <input
                         type="text"
                         name="name"
@@ -113,7 +138,7 @@
                     </div>
 
                     <div class="col-md-6">
-                      <label class="form-label">Kategori</label>
+                      <label for="packageCategory" class="form-label">Kategori</label>
                       <select name="category_id" id="packageCategory" class="form-select" required>
                         <option value="">Pilih Kategori</option>
                         @foreach ($categories as $category)
@@ -125,8 +150,8 @@
                     </div>
 
                     <div class="col-md-4">
-                      <label class="form-label">Harga Paket</label>
-                      <div class="input-group">
+                      <label for="packagePrice" class="form-label">Harga Paket</label>
+                      <div class="input-group package-input-group">
                         <span class="input-group-text">Rp</span>
                         <input
                           type="number"
@@ -140,8 +165,8 @@
                     </div>
 
                     <div class="col-md-4">
-                      <label class="form-label">Durasi</label>
-                      <div class="input-group">
+                      <label for="packageDuration" class="form-label">Durasi</label>
+                      <div class="input-group package-input-group">
                         <input
                           type="number"
                           name="duration_minutes"
@@ -156,8 +181,8 @@
                     </div>
 
                     <div class="col-md-4">
-                      <label class="form-label">Jumlah Foto Edit</label>
-                      <div class="input-group">
+                      <label for="packagePhotoCount" class="form-label">Jumlah Foto Edit</label>
+                      <div class="input-group package-input-group">
                         <input
                           type="number"
                           name="photo_count"
@@ -172,7 +197,7 @@
                     </div>
 
                     <div class="col-md-6">
-                      <label class="form-label">Jenis Lokasi</label>
+                      <label for="packageLocation" class="form-label">Jenis Lokasi</label>
                       <select name="location_type" id="packageLocation" class="form-select" required>
                         <option value="">Pilih jenis lokasi</option>
                         <option value="indoor" {{ old('location_type') === 'indoor' ? 'selected' : '' }}>
@@ -185,7 +210,7 @@
                     </div>
 
                     <div class="col-md-6">
-                      <label class="form-label">Jumlah Orang</label>
+                      <label for="packagePersonCount" class="form-label">Jumlah Orang</label>
                       <input
                         type="number"
                         name="person_count"
@@ -194,17 +219,17 @@
                         value="{{ old('person_count') }}"
                         placeholder="Boleh dikosongkan"
                         min="1">
-                      <small class="text-muted d-block mt-1">
-                        Kosongkan untuk paket seperti prewed atau wedding.
-                      </small>
+                      <div class="form-text">
+                        Kosongkan untuk paket seperti prewed, wedding, atau paket fleksibel.
+                      </div>
                     </div>
 
                     <div class="col-12">
-                      <label class="form-label">Deskripsi Paket</label>
+                      <label for="packageDescription" class="form-label">Deskripsi Paket</label>
                       <textarea
                         name="description"
                         id="packageDescription"
-                        class="form-control"
+                        class="form-control package-textarea"
                         rows="5"
                         placeholder="Tulis deskripsi lengkap paket...">{{ old('description') }}</textarea>
                     </div>
@@ -212,16 +237,22 @@
                 </div>
 
                 {{-- STATUS --}}
-                <div class="create-section mb-0">
+                <div class="package-form-section mb-0">
                   <div class="status-card">
-                    <div>
-                      <h6>Status Paket</h6>
-                      <p>Jika aktif, paket akan tampil dan bisa digunakan pada sistem.</p>
+                    <div class="status-card-left">
+                      <div class="status-card-icon">
+                        <i class="bx bx-check-shield"></i>
+                      </div>
+
+                      <div>
+                        <h6>Status Paket</h6>
+                        <p>Jika aktif, paket akan tampil dan bisa digunakan pada sistem.</p>
+                      </div>
                     </div>
 
                     <input type="hidden" name="is_active" value="0">
 
-                    <div class="form-check form-switch mb-0">
+                    <div class="form-check form-switch status-switch mb-0">
                       <input
                         class="form-check-input"
                         type="checkbox"
@@ -230,7 +261,7 @@
                         name="is_active"
                         value="1"
                         {{ old('is_active', 1) ? 'checked' : '' }}>
-                      <label class="form-check-label fw-semibold" for="isActive">
+                      <label class="form-check-label" for="isActive">
                         Aktif
                       </label>
                     </div>
@@ -239,14 +270,14 @@
               </div>
 
               <div class="card-footer package-create-footer">
+                <a href="{{ route('admin.packages.index', ['tab' => 'photo-packages']) }}" class="btn btn-outline-secondary">
+                  Batal
+                </a>
+
                 <button type="submit" class="btn btn-primary">
                   <i class="bx bx-save me-1"></i>
                   Simpan Paket
                 </button>
-
-                <a href="{{ route('admin.packages.index', ['tab' => 'photo-packages']) }}" class="btn btn-outline-secondary">
-                  Batal
-                </a>
               </div>
             </div>
           </div>
@@ -254,11 +285,11 @@
           {{-- RIGHT PREVIEW --}}
           <div class="col-xl-4 col-lg-5">
             <div class="preview-sticky">
-              <div class="card section-card preview-card">
+              <div class="card package-preview-card">
                 <div class="card-header">
                   <div>
-                    <h5 class="section-title">Preview File</h5>
-                    <p class="section-subtitle mb-0">
+                    <h5 class="mb-1">Preview Paket</h5>
+                    <p class="mb-0">
                       Tampilan singkat paket yang sedang dibuat.
                     </p>
                   </div>
@@ -280,9 +311,13 @@
                   </div>
 
                   <div class="preview-content">
-                    <h5 id="previewPackageName">Nama Paket</h5>
+                    <div class="preview-name-row">
+                      <h5 id="previewPackageName">Nama Paket</h5>
+                      <span class="badge bg-label-success">Aktif</span>
+                    </div>
 
                     <div class="preview-meta">
+                      <i class="bx bx-category-alt"></i>
                       <span id="previewCategoryText">Kategori belum dipilih</span>
                     </div>
 
@@ -314,6 +349,40 @@
                   </div>
 
                   <div class="preview-thumbs" id="imagePreview"></div>
+
+                  <div class="preview-note">
+                    <i class="bx bx-info-circle"></i>
+                    <span>Klik gambar untuk preview utama. Klik tombol X untuk menghapus gambar.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="package-helper-card mt-4">
+                <div class="package-helper-icon">
+                  <i class="bx bx-bulb"></i>
+                </div>
+
+                <h6>Tips Paket</h6>
+                <p>
+                  Gunakan nama paket yang jelas, harga sesuai layanan, dan foto portofolio
+                  yang merepresentasikan hasil studio.
+                </p>
+
+                <div class="package-helper-list">
+                  <div class="package-helper-item">
+                    <i class="bx bx-check-circle"></i>
+                    <span>Upload foto portofolio terbaik.</span>
+                  </div>
+
+                  <div class="package-helper-item">
+                    <i class="bx bx-check-circle"></i>
+                    <span>Pastikan durasi dan jumlah edit sudah sesuai.</span>
+                  </div>
+
+                  <div class="package-helper-item">
+                    <i class="bx bx-check-circle"></i>
+                    <span>Aktifkan paket jika sudah siap dipakai klien.</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -324,52 +393,301 @@
   </div>
 
   <style>
-    .package-create-card .card-header,
-    .preview-card .card-header {
-      padding: 30px 34px 22px !important;
+    .package-create-hero {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      padding: 32px 34px;
+      border-radius: 32px;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.36), transparent 32%),
+        linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+      box-shadow: 0 24px 54px rgba(52, 79, 165, 0.24);
+      color: #ffffff;
     }
 
-    .package-create-body {
-      padding: 28px 34px 30px !important;
+    .package-create-hero::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -90px;
+      bottom: -130px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .package-create-hero-left {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      min-width: 0;
+      max-width: 940px;
+    }
+
+    .package-create-hero-icon {
+      width: 76px;
+      height: 76px;
+      border-radius: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-size: 38px;
+      box-shadow: 0 16px 32px rgba(22, 43, 77, 0.16);
+    }
+
+    .package-create-kicker {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .package-create-hero h4 {
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .package-create-hero p {
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.75;
+      margin-bottom: 0;
+    }
+
+    .package-create-hero-actions {
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+    }
+
+    .package-create-back-btn {
+      min-height: 54px;
+      border: 0;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--mf-primary);
+      font-weight: 900;
+      padding: 0 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      box-shadow: 0 16px 30px rgba(22, 43, 77, 0.16);
+      transition: 0.2s ease;
+    }
+
+    .package-create-back-btn:hover {
+      background: #ffffff;
+      color: var(--mf-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 36px rgba(22, 43, 77, 0.18);
+    }
+
+    .package-create-alert {
+      border: 0;
+      border-radius: 20px;
+      box-shadow: var(--mf-shadow-soft);
+    }
+
+    .package-create-alert i {
+      font-size: 20px;
+    }
+
+    .package-create-card,
+    .package-preview-card,
+    .package-helper-card {
+      border: 0;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: var(--mf-shadow-soft);
+      overflow: hidden;
+    }
+
+    .package-create-card .card-header,
+    .package-preview-card .card-header {
+      padding: 30px 34px 22px !important;
+      border-bottom: 1px solid var(--mf-border);
       background:
-        radial-gradient(circle at top right, rgba(159, 191, 210, 0.14), transparent 35%),
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.16), transparent 35%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    }
+
+    .package-create-card .card-header h5,
+    .package-preview-card .card-header h5 {
+      color: var(--mf-ink);
+      font-weight: 900;
+    }
+
+    .package-create-card .card-header p,
+    .package-preview-card .card-header p {
+      color: var(--mf-muted);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+
+    .package-create-card .card-body {
+      padding: 30px 34px 34px !important;
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.10), transparent 35%),
         linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
     }
 
     .package-create-footer {
-      padding: 22px 34px 28px !important;
+      padding: 24px 34px 30px !important;
+      border-top: 1px solid var(--mf-border);
       display: flex;
       justify-content: flex-end;
+      align-items: center;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
+      background: #ffffff;
     }
 
-    .create-section {
+    .package-create-footer .btn {
+      min-height: 48px;
+      border-radius: 16px;
+      font-weight: 900;
+      padding-left: 24px;
+      padding-right: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .package-form-section {
       margin-bottom: 34px;
+      padding-bottom: 34px;
+      border-bottom: 1px solid var(--mf-border);
     }
 
-    .create-section-heading {
+    .package-form-section.mb-0 {
+      margin-bottom: 0 !important;
+      padding-bottom: 0 !important;
+      border-bottom: 0;
+    }
+
+    .package-section-heading {
       display: flex;
-      justify-content: space-between;
       align-items: flex-start;
       gap: 14px;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
-    .create-section-heading h6,
+    .package-section-icon,
+    .status-card-icon,
+    .package-helper-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
+      color: #ffffff;
+      font-size: 23px;
+      box-shadow: 0 12px 24px rgba(88, 115, 220, 0.18);
+    }
+
+    .package-section-heading h6,
     .status-card h6 {
       color: var(--mf-ink);
       font-weight: 900;
       margin-bottom: 5px;
     }
 
-    .create-section-heading p,
+    .package-section-heading p,
     .status-card p {
       color: var(--mf-muted);
       font-size: 13px;
       font-weight: 600;
       line-height: 1.6;
       margin-bottom: 0;
+    }
+
+    .package-create-card .form-label {
+      color: var(--mf-ink);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+
+    .package-create-card .form-control,
+    .package-create-card .form-select {
+      min-height: 54px;
+      border-radius: 18px !important;
+      border: 1px solid var(--mf-border) !important;
+      background: #ffffff !important;
+      color: var(--mf-ink) !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      box-shadow: none !important;
+    }
+
+    .package-create-card .form-control:focus,
+    .package-create-card .form-select:focus {
+      border-color: rgba(88, 115, 220, 0.48) !important;
+      box-shadow: 0 0 0 0.22rem rgba(88, 115, 220, 0.10) !important;
+    }
+
+    .package-create-card .form-text {
+      color: var(--mf-muted);
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .package-textarea {
+      min-height: 138px !important;
+      padding-top: 14px !important;
+      resize: vertical;
+    }
+
+    .package-input-group {
+      min-height: 54px;
+      border: 1px solid var(--mf-border);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #ffffff;
+      transition: 0.18s ease;
+    }
+
+    .package-input-group:focus-within {
+      border-color: rgba(88, 115, 220, 0.48);
+      box-shadow: 0 0 0 0.22rem rgba(88, 115, 220, 0.10);
+    }
+
+    .package-input-group .input-group-text {
+      border: 0 !important;
+      background: #ffffff !important;
+      color: var(--mf-muted) !important;
+      font-size: 13px !important;
+      font-weight: 900 !important;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .package-input-group .form-control {
+      border: 0 !important;
+      border-radius: 0 !important;
+      min-height: 52px !important;
     }
 
     .upload-dropzone {
@@ -397,15 +715,15 @@
     }
 
     .upload-icon {
-      width: 58px;
-      height: 58px;
-      border-radius: 20px;
+      width: 62px;
+      height: 62px;
+      border-radius: 22px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, var(--mf-primary), var(--mf-blue));
       color: #ffffff;
-      font-size: 28px;
+      font-size: 31px;
       box-shadow: 0 16px 32px rgba(88, 115, 220, 0.22);
       margin-bottom: 14px;
     }
@@ -418,7 +736,9 @@
 
     .upload-dropzone p {
       color: var(--mf-muted);
+      font-size: 14px;
       font-weight: 600;
+      line-height: 1.65;
       margin-bottom: 16px;
     }
 
@@ -429,7 +749,13 @@
     }
 
     .upload-btn {
-      min-width: 150px;
+      min-width: 160px;
+      min-height: 46px;
+      border-radius: 15px;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .selected-file-info {
@@ -454,11 +780,36 @@
       padding: 20px;
       border: 1px solid var(--mf-border);
       border-radius: 22px;
-      background: #ffffff;
+      background:
+        radial-gradient(circle at top right, rgba(159, 191, 210, 0.12), transparent 36%),
+        #ffffff;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 16px;
+      gap: 18px;
+    }
+
+    .status-card-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-switch {
+      flex-shrink: 0;
+    }
+
+    .status-switch .form-check-input {
+      width: 46px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .status-switch .form-check-label {
+      color: var(--mf-ink);
+      font-weight: 900;
+      margin-left: 6px;
+      cursor: pointer;
     }
 
     .preview-sticky {
@@ -466,13 +817,14 @@
       top: 105px;
     }
 
-    .preview-card .card-body {
+    .package-preview-card .card-body {
       padding: 24px !important;
     }
 
     .preview-image-wrap {
       position: relative;
-      height: 230px;
+      width: 100%;
+      min-height: 230px;
       border-radius: 26px;
       overflow: hidden;
       background:
@@ -480,17 +832,45 @@
         linear-gradient(135deg, #eef2ff 0%, #f8fbfd 100%);
       border: 1px solid var(--mf-border);
       margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.2s ease;
+    }
+
+    .preview-image-wrap.is-landscape {
+      aspect-ratio: 16 / 10;
+      width: 100%;
+      min-height: unset;
+    }
+
+    .preview-image-wrap.is-portrait {
+      aspect-ratio: 3 / 4;
+      width: min(78%, 310px);
+      min-height: unset;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .preview-image-wrap.is-square {
+      aspect-ratio: 1 / 1;
+      width: min(88%, 330px);
+      min-height: unset;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .preview-main-image {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
+      background: #f8fbfd;
     }
 
     .preview-empty {
       height: 100%;
+      min-height: 230px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -521,17 +901,34 @@
       backdrop-filter: blur(10px);
     }
 
-    .preview-content h5 {
+    .preview-name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .preview-name-row h5 {
       color: var(--mf-ink);
       font-weight: 900;
-      margin-bottom: 6px;
+      margin: 0;
+      line-height: 1.35;
     }
 
     .preview-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       color: var(--mf-muted);
       font-size: 13px;
       font-weight: 700;
       margin-bottom: 16px;
+    }
+
+    .preview-meta i {
+      color: var(--mf-primary);
+      font-size: 17px;
     }
 
     .preview-detail-grid {
@@ -552,8 +949,10 @@
       display: block;
       color: var(--mf-muted);
       font-size: 11px;
-      font-weight: 800;
+      font-weight: 900;
       margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
 
     .preview-detail-grid strong {
@@ -574,12 +973,13 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 10px;
-      max-height: 220px;
+      max-height: 260px;
       overflow-y: auto;
       padding-right: 4px;
     }
 
     .preview-thumb-item {
+      position: relative;
       border: 1px solid var(--mf-border);
       border-radius: 14px;
       overflow: hidden;
@@ -598,20 +998,130 @@
     .preview-thumb-item img {
       width: 100%;
       height: 68px;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
+      background: #f8fbfd;
+    }
+
+    .remove-thumb-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(220, 53, 69, 0.92);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .remove-thumb-btn i {
+      font-size: 17px;
+    }
+
+    .preview-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 14px;
+      color: var(--mf-muted);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.6;
+    }
+
+    .preview-note i {
+      color: var(--mf-primary);
+      font-size: 17px;
+      margin-top: 1px;
+    }
+
+    .package-helper-card {
+      padding: 24px;
+    }
+
+    .package-helper-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 19px;
+      font-size: 27px;
+      margin-bottom: 16px;
+    }
+
+    .package-helper-card h6 {
+      color: var(--mf-ink);
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .package-helper-card p {
+      color: var(--mf-muted);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .package-helper-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .package-helper-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      color: var(--mf-ink);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.55;
+    }
+
+    .package-helper-item i {
+      color: var(--mf-primary);
+      font-size: 18px;
+      margin-top: 1px;
     }
 
     @media (max-width: 991px) {
       .preview-sticky {
         position: static;
       }
+
+      .package-create-hero {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .package-create-hero-actions,
+      .package-create-back-btn {
+        width: 100%;
+      }
     }
 
     @media (max-width: 768px) {
+      .package-create-hero {
+        padding: 26px 22px;
+      }
+
+      .package-create-hero-left {
+        flex-direction: column;
+      }
+
+      .package-create-hero h4 {
+        font-size: 26px;
+      }
+
       .package-create-card .card-header,
-      .preview-card .card-header,
-      .package-create-body,
+      .package-preview-card .card-header,
+      .package-create-card .card-body,
       .package-create-footer {
         padding-left: 22px !important;
         padding-right: 22px !important;
@@ -621,13 +1131,20 @@
         min-height: 220px;
       }
 
-      .status-card {
+      .status-card,
+      .status-card-left,
+      .package-section-heading {
         align-items: flex-start;
         flex-direction: column;
       }
 
       .package-create-footer {
-        justify-content: flex-start;
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+
+      .package-create-footer .btn {
+        width: 100%;
       }
 
       .preview-detail-grid {
@@ -636,6 +1153,18 @@
 
       .preview-thumbs {
         grid-template-columns: repeat(3, 1fr);
+      }
+
+      .preview-image-wrap.is-portrait {
+        width: min(86%, 300px);
+      }
+
+      .preview-image-wrap.is-square {
+        width: min(90%, 310px);
+      }
+
+      .package-helper-card {
+        padding: 22px;
       }
     }
   </style>
@@ -648,7 +1177,9 @@
       const previewContainer = document.getElementById('imagePreview');
       const selectedFileInfo = document.getElementById('selectedFileInfo');
       const selectedFileText = document.getElementById('selectedFileText');
+      const browsePortfolioBtn = document.getElementById('browsePortfolioBtn');
 
+      const mainPreviewWrap = document.getElementById('mainPreviewWrap');
       const mainPreviewImage = document.getElementById('mainPreviewImage');
       const previewEmpty = document.getElementById('previewEmpty');
       const previewFileBadge = document.getElementById('previewFileBadge');
@@ -670,60 +1201,157 @@
       const previewLocationText = document.getElementById('previewLocationText');
       const previewDescriptionText = document.getElementById('previewDescriptionText');
 
+      let selectedFiles = [];
+
       function formatRupiah(value) {
         const number = parseInt(value || 0, 10);
-
         return 'Rp ' + new Intl.NumberFormat('id-ID').format(number);
       }
 
-      function updatePackagePreview() {
-        previewPackageName.textContent = packageName.value.trim() || 'Nama Paket';
+      function clearPreviewOrientation() {
+        if (!mainPreviewWrap) return;
 
-        previewCategoryText.textContent = packageCategory.options[packageCategory.selectedIndex]?.text || 'Kategori belum dipilih';
+        mainPreviewWrap.classList.remove('is-landscape', 'is-portrait', 'is-square');
+      }
 
-        if (!packageCategory.value) {
-          previewCategoryText.textContent = 'Kategori belum dipilih';
-        }
+      function applyPreviewOrientation(src) {
+        if (!mainPreviewWrap || !src) return;
 
-        previewPriceText.textContent = formatRupiah(packagePrice.value);
-        previewDurationText.textContent = (packageDuration.value || 0) + ' Menit';
-        previewPhotoText.textContent = (packagePhotoCount.value || 0) + ' Foto';
-        previewLocationText.textContent = packageLocation.value ? packageLocation.value.charAt(0).toUpperCase() + packageLocation.value.slice(1) : '-';
+        const tempImage = new Image();
 
-        previewDescriptionText.textContent = packageDescription.value.trim() || 'Deskripsi paket akan muncul di sini.';
+        tempImage.onload = function () {
+          clearPreviewOrientation();
+
+          const width = tempImage.naturalWidth;
+          const height = tempImage.naturalHeight;
+
+          if (width > height) {
+            mainPreviewWrap.classList.add('is-landscape');
+          } else if (height > width) {
+            mainPreviewWrap.classList.add('is-portrait');
+          } else {
+            mainPreviewWrap.classList.add('is-square');
+          }
+        };
+
+        tempImage.src = src;
       }
 
       function setMainImage(src) {
+        if (!src) {
+          mainPreviewImage.src = '';
+          mainPreviewImage.classList.add('d-none');
+          previewEmpty.classList.remove('d-none');
+          clearPreviewOrientation();
+          return;
+        }
+
         mainPreviewImage.src = src;
         mainPreviewImage.classList.remove('d-none');
         previewEmpty.classList.add('d-none');
+
+        applyPreviewOrientation(src);
       }
 
-      function resetImagePreview() {
-        previewContainer.innerHTML = '';
-        mainPreviewImage.src = '';
-        mainPreviewImage.classList.add('d-none');
-        previewEmpty.classList.remove('d-none');
-        previewFileBadge.classList.add('d-none');
-        selectedFileInfo.classList.add('d-none');
-        selectedFileText.textContent = 'Belum ada gambar dipilih.';
+      function syncInputFiles() {
+        const dataTransfer = new DataTransfer();
+
+        selectedFiles.forEach(function (file) {
+          dataTransfer.items.add(file);
+        });
+
+        portfolioInput.files = dataTransfer.files;
       }
 
-      function renderImages(files) {
-        previewContainer.innerHTML = '';
+      function refreshFileInfo() {
+        const total = selectedFiles.length;
 
-        if (!files.length) {
-          resetImagePreview();
+        if (total > 0) {
+          selectedFileInfo.classList.remove('d-none');
+          selectedFileText.textContent = total + ' gambar dipilih';
+
+          previewFileBadge.classList.remove('d-none');
+          previewFileCount.textContent = total + ' foto';
+        } else {
+          selectedFileInfo.classList.add('d-none');
+          selectedFileText.textContent = 'Belum ada gambar dipilih.';
+
+          previewFileBadge.classList.add('d-none');
+          previewFileCount.textContent = '0 foto';
+        }
+      }
+
+      function setActiveThumb(item) {
+        previewContainer.querySelectorAll('.preview-thumb-item').forEach(function (thumb) {
+          thumb.classList.remove('active');
+        });
+
+        item.classList.add('active');
+        setMainImage(item.dataset.src);
+      }
+
+      function chooseFirstImageIfNeeded() {
+        const activeThumb = previewContainer.querySelector('.preview-thumb-item.active');
+
+        if (activeThumb) {
+          setMainImage(activeThumb.dataset.src);
           return;
         }
 
-        if (files.length > 20) {
-          alert('Maksimal 20 gambar portofolio.');
-          portfolioInput.value = '';
-          resetImagePreview();
-          return;
-        }
+        const firstThumb = previewContainer.querySelector('.preview-thumb-item');
 
+        if (firstThumb) {
+          setActiveThumb(firstThumb);
+        } else {
+          setMainImage('');
+        }
+      }
+
+      function renderImages() {
+        previewContainer.innerHTML = '';
+
+        selectedFiles.forEach(function (file, index) {
+          const imageUrl = URL.createObjectURL(file);
+
+          const item = document.createElement('div');
+          item.className = 'preview-thumb-item' + (index === 0 ? ' active' : '');
+          item.dataset.index = index;
+          item.dataset.src = imageUrl;
+
+          item.innerHTML = `
+            <button type="button" class="remove-thumb-btn" title="Hapus gambar">
+              <i class="bx bx-x"></i>
+            </button>
+            <img src="${imageUrl}" alt="${file.name}">
+          `;
+
+          item.addEventListener('click', function () {
+            setActiveThumb(item);
+          });
+
+          item.querySelector('.remove-thumb-btn').addEventListener('click', function (event) {
+            event.stopPropagation();
+
+            const wasActive = item.classList.contains('active');
+            const fileIndex = parseInt(item.dataset.index, 10);
+
+            selectedFiles.splice(fileIndex, 1);
+            syncInputFiles();
+            renderImages();
+
+            if (wasActive) {
+              chooseFirstImageIfNeeded();
+            }
+          });
+
+          previewContainer.appendChild(item);
+        });
+
+        refreshFileInfo();
+        chooseFirstImageIfNeeded();
+      }
+
+      function addFiles(files) {
         const imageFiles = files.filter(function (file) {
           return file.type.startsWith('image/');
         });
@@ -731,59 +1359,60 @@
         if (!imageFiles.length) {
           alert('File harus berupa gambar.');
           portfolioInput.value = '';
-          resetImagePreview();
           return;
         }
 
-        selectedFileInfo.classList.remove('d-none');
-        selectedFileText.textContent = imageFiles.length + ' gambar dipilih';
+        if ((selectedFiles.length + imageFiles.length) > 20) {
+          alert('Maksimal 20 gambar portofolio.');
+          portfolioInput.value = '';
+          return;
+        }
 
-        previewFileBadge.classList.remove('d-none');
-        previewFileCount.textContent = imageFiles.length + ' foto';
-
-        imageFiles.forEach(function (file, index) {
-          const imageUrl = URL.createObjectURL(file);
-
-          if (index === 0) {
-            setMainImage(imageUrl);
-          }
-
-          const item = document.createElement('div');
-          item.className = 'preview-thumb-item' + (index === 0 ? ' active' : '');
-
-          item.innerHTML = `
-            <img src="${imageUrl}" alt="${file.name}">
-          `;
-
-          item.addEventListener('click', function () {
-            document.querySelectorAll('.preview-thumb-item').forEach(function (thumb) {
-              thumb.classList.remove('active');
-            });
-
-            item.classList.add('active');
-            setMainImage(imageUrl);
-          });
-
-          previewContainer.appendChild(item);
+        imageFiles.forEach(function (file) {
+          selectedFiles.push(file);
         });
+
+        syncInputFiles();
+        renderImages();
+
+        const newestThumb = previewContainer.querySelector('.preview-thumb-item:last-child');
+
+        if (newestThumb) {
+          setActiveThumb(newestThumb);
+        }
       }
 
-      function setInputFiles(files) {
-        const dataTransfer = new DataTransfer();
+      function updatePackagePreview() {
+        previewPackageName.textContent = packageName.value.trim() || 'Nama Paket';
 
-        files.forEach(function (file) {
-          dataTransfer.items.add(file);
-        });
+        if (packageCategory.value) {
+          previewCategoryText.textContent = packageCategory.options[packageCategory.selectedIndex]?.text || 'Kategori belum dipilih';
+        } else {
+          previewCategoryText.textContent = 'Kategori belum dipilih';
+        }
 
-        portfolioInput.files = dataTransfer.files;
-        renderImages(Array.from(portfolioInput.files));
+        previewPriceText.textContent = formatRupiah(packagePrice.value);
+        previewDurationText.textContent = (packageDuration.value || 0) + ' Menit';
+        previewPhotoText.textContent = (packagePhotoCount.value || 0) + ' Foto';
+
+        previewLocationText.textContent = packageLocation.value
+          ? packageLocation.value.charAt(0).toUpperCase() + packageLocation.value.slice(1)
+          : '-';
+
+        previewDescriptionText.textContent = packageDescription.value.trim() || 'Deskripsi paket akan muncul di sini.';
       }
 
       if (dropzone && portfolioInput) {
         dropzone.addEventListener('click', function (event) {
-          if (event.target.tagName.toLowerCase() !== 'label') {
-            portfolioInput.click();
+          if (
+            event.target === portfolioInput ||
+            event.target === browsePortfolioBtn ||
+            browsePortfolioBtn?.contains(event.target)
+          ) {
+            return;
           }
+
+          portfolioInput.click();
         });
 
         dropzone.addEventListener('dragover', function (event) {
@@ -799,12 +1428,11 @@
           event.preventDefault();
           dropzone.classList.remove('drag-over');
 
-          const files = Array.from(event.dataTransfer.files);
-          setInputFiles(files);
+          addFiles(Array.from(event.dataTransfer.files));
         });
 
         portfolioInput.addEventListener('change', function () {
-          renderImages(Array.from(this.files));
+          addFiles(Array.from(this.files));
         });
       }
 
@@ -817,6 +1445,8 @@
         packageLocation,
         packageDescription
       ].forEach(function (input) {
+        if (!input) return;
+
         input.addEventListener('input', updatePackagePreview);
         input.addEventListener('change', updatePackagePreview);
       });
@@ -831,6 +1461,8 @@
       }
 
       updatePackagePreview();
+      refreshFileInfo();
+      chooseFirstImageIfNeeded();
     });
   </script>
 @endsection
